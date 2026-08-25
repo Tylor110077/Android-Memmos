@@ -128,7 +128,9 @@ fun PanelHost(
                 sheetAnim.animateTo(sheetHpx, tween(240)) // 整段滑出（同一值，与 offset 无冲突）
             }
         }
-        if (model.sheetOpen.value || sheetAnim.value < sheetHpx) {
+        // 只在「明确打开过」后渲染：sheetAnim 初始 0 < 屏高，旧条件会让抽屉在面板首帧
+        // 就渲染出来（offset 0 盖住面板），而其 GenericShape 描边在 0 尺寸帧会崩溃
+        if (model.sheetOpen.value || sheetAnim.value > 0f) {
             val closePx = with(density) { 56.dp.toPx() }
             Box(
                 Modifier

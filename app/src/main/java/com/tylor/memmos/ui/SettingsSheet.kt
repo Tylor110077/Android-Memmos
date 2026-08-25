@@ -32,7 +32,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
-import androidx.compose.foundation.shape.GenericShape
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalConfiguration
@@ -71,20 +72,10 @@ fun SettingsSheet(
     modifier: Modifier = Modifier,
 ) {
     val density = LocalDensity.current
-    // 描边只走两侧竖线 + 顶部两角圆弧，底部直线不描（用户要求下边框透明）
-    val sheetBorderShape = remember(density) {
-        val r = with(density) { 26.dp.toPx() }
-        GenericShape { size, _ ->
-            Path().apply {
-                moveTo(0f, size.height)
-                lineTo(0f, r)
-                arcTo(Rect(0f, 0f, r * 2f, r * 2f), 180f, 90f, false) // 顶左角
-                lineTo(size.width - r, 0f)
-                arcTo(Rect(size.width - r * 2f, 0f, size.width, r * 2f), 270f, 90f, false) // 顶右角
-                lineTo(size.width, size.height)
-            }
-        }
-    }
+    // 描边只走两侧竖线 + 顶部两角圆弧，底部直线不描（用户要求下边框透明）。
+    // 不用 Modifier.border(GenericShape)：通用形状描边走 Bitmap 缓存，尺寸为 0 的帧会崩
+    // （真机复现：width and height must be > 0）；自绘 Path 无缓存、0 尺寸安全。
+    val borderR = with(density) { 26.dp.toPx() }
     Box(
         modifier
             .fillMaxWidth()
@@ -97,7 +88,18 @@ fun SettingsSheet(
         Column(
             Modifier
                 .fillMaxSize()
-                .border(1.dp, Color(0x26FFFFFF), sheetBorderShape)
+                .drawWithContent {
+                    drawContent()
+                    val p = Path().apply {
+                        moveTo(0f, size.height)
+                        lineTo(0f, borderR)
+                        arcTo(Rect(0f, 0f, borderR * 2f, borderR * 2f), 180f, 90f, false) // 顶左角
+                        lineTo(size.width - borderR, 0f)
+                        arcTo(Rect(size.width - borderR * 2f, 0f, size.width, borderR * 2f), 270f, 90f, false) // 顶右角
+                        lineTo(size.width, size.height)
+                    }
+                    drawPath(p, Color(0x26FFFFFF), style = Stroke(1.dp.toPx()))
+                }
                 .padding(horizontal = 20.dp, vertical = 18.dp),
         ) {
         // 把手
