@@ -27,6 +27,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -74,9 +75,21 @@ fun CapturePanel(
 
     Box(modifier.fillMaxWidth()) {
         // 先垫 95% 深底：面板是悬浮层、底下是宿主 App，全透明会让宿主文字叠进来
-        Box(Modifier.fillMaxSize().background(Color(0xF20B0D12)))
-        // 与主界面同一片环境光（模板 Ambient Background）
-        AmbientBackdrop(Modifier.fillMaxSize(), alpha = 0.45f)
+        Box(Modifier.fillMaxSize().background(Color(0xF50B0D12)))
+        // 环境光调暗 + 可读性罩（上下深、压制亮中带）：悬浮层叠在任意宿主内容上，
+        // 比主界面更强调文字对比（用户反馈：滑开后内容可见性弱）
+        AmbientBackdrop(Modifier.fillMaxSize(), alpha = 0.30f)
+        Box(
+            Modifier.fillMaxSize().background(
+                Brush.verticalGradient(
+                    listOf(
+                        Color(0x99000000), // 上 60% 压暗
+                        Color(0x59000000), // 中带 35%（光斑最亮区域）
+                        Color(0x99000000), // 下 60%
+                    ),
+                ),
+            ),
+        )
         Column(
             Modifier.fillMaxWidth()
                 // 上下 34dp：NO_LIMITS 后窗口延伸进状态栏/手势区，补偿避免内容被系统 UI 压住
@@ -166,7 +179,7 @@ fun CapturePanel(
                 }
                 Text(
                     "① 在内容 App「分享 → 更多 → Memmos」识别当前帖子（当前支持小红书）；② 复制链接后点这里。均后台完成。",
-                    fontSize = 10.sp, color = TextFaint, lineHeight = 15.sp,
+                    fontSize = 10.sp, color = TextSoft, lineHeight = 15.sp,
                     modifier = Modifier.padding(top = 5.dp),
                 )
             }
