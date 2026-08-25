@@ -42,6 +42,7 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.LocalContext
 import coil.compose.AsyncImage
 import com.tylor.memmos.data.ClipStore
@@ -76,6 +77,7 @@ fun CapturePanel(
 ) {
     val ctx = LocalContext.current
     val density = LocalDensity.current
+    val panelView = LocalView.current
     val cap by XhsCaptureService.state.collectAsState()
     val paired = remember { SyncPrefs.load(ctx) != null }
     // 抓取完成后刷新最近列表
@@ -95,7 +97,12 @@ fun CapturePanel(
                     var total = 0f
                     detectVerticalDragGestures(
                         onDragStart = { total = 0f },
-                        onDragEnd = { if (total > threshold) onOpenSettings() },
+                        onDragEnd = {
+                            if (total > threshold) {
+                                panelView.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
+                                onOpenSettings()
+                            }
+                        },
                         onVerticalDrag = { change, dy -> total += dy; change.consume() },
                     )
                 },
@@ -121,7 +128,10 @@ fun CapturePanel(
                 Modifier
                     .fillMaxWidth()
                     .height(28.dp)
-                    .clickable { onOpenSettings() },
+                    .clickable {
+                        panelView.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
+                        onOpenSettings()
+                    },
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center,
             ) {
@@ -143,6 +153,7 @@ fun CapturePanel(
                                 val t = with(density) { 12.dp.toPx() }
                                 if (pullDown > t) {
                                     pullDown = 0f
+                                    panelView.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
                                     onOpenSettings()
                                 }
                             } else if (available.y < 0f) pullDown = 0f

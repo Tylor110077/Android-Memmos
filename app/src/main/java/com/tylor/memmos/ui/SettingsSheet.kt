@@ -30,6 +30,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -84,20 +85,11 @@ fun SettingsSheet(
             // 空白区（无控件处理的手势）tap → 整个退出；滑杆/chip/把手各自消费自己的 tap
             .pointerInput(Unit) { detectTapGestures(onTap = { onDismissAll() }) },
     ) {
-        // 背景：有一点透明的纯黑 + 细横线纹理装饰（用户要求「装饰点线条，多一点也没问题」）
+        // 背景：有一点透明的纯黑（线条装饰改为分区间的渐隐软线，满屏横纹取消——观感更干净）
         Box(
             Modifier.fillMaxSize()
                 .clip(RoundedCornerShape(bottomStart = 26.dp, bottomEnd = 26.dp))
-                .background(Color(0xE6000000))
-                .drawWithContent {
-                    drawContent()
-                    val step = with(density) { 26.dp.toPx() }
-                    var y = step
-                    while (y < size.height) {
-                        drawLine(Color(0x0AFFFFFF), Offset(0f, y), Offset(size.width, y), strokeWidth = 1f)
-                        y += step
-                    }
-                },
+                .background(Color(0xE6000000)),
         )
         Column(
             Modifier
@@ -170,7 +162,7 @@ fun SettingsSheet(
                 }
             }
             Spacer(Modifier.height(2.dp))
-            Box(Modifier.fillMaxWidth().height(1.dp).background(Color(0x14FFFFFF))) // 分区装饰线
+            SoftDivider() // 分区装饰线（两端渐隐）
             Spacer(Modifier.height(10.dp))
             // 配色：滑块本体纯色三选一（绿/白/深灰，用户要求）
             SectionLabel("配 色")
@@ -189,7 +181,7 @@ fun SettingsSheet(
                 ColorChip("深灰", TabColor.DARK, barColor == TabColor.DARK) { onColorChange(TabColor.DARK) }
             }
             Spacer(Modifier.height(2.dp))
-            Box(Modifier.fillMaxWidth().height(1.dp).background(Color(0x14FFFFFF))) // 分区装饰线
+            SoftDivider() // 分区装饰线（两端渐隐）
             Spacer(Modifier.height(10.dp))
             // 滑杆：左右贴边时调纵向位置一致
             SliderRow(
@@ -286,6 +278,29 @@ private fun ColorChip(label: String, color: TabColor, selected: Boolean, onSelec
 }
 
 /** 贴边方向分段按钮（模板 seg-btn：选中白底黑字，未选中白/60） */
+/** 柔和分区线：中央白 15%、两端透明渐隐（比整条实线精致） */
+@Composable
+private fun SoftDivider() {
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .height(1.dp)
+            .drawWithContent {
+                drawContent()
+                val w = size.width
+                val inset = w * 0.22f
+                drawLine(
+                    Brush.horizontalGradient(
+                        listOf(Color.Transparent, Color(0x2AFFFFFF), Color.Transparent),
+                    ),
+                    Offset(inset, size.height / 2f),
+                    Offset(w - inset, size.height / 2f),
+                    strokeWidth = 1.dp.toPx(),
+                )
+            },
+    )
+}
+
 @Composable
 private fun EdgeChip(label: String, selected: Boolean, onSelect: () -> Unit) {
     Text(
