@@ -317,8 +317,10 @@ class XhsCaptureService : Service() {
     }
 
     private fun update(p: Float, s: String) {
-        state.value = CaptureState(running = true, progress = p, status = s, done = null)
-        updateNotif(p, s)
+        // 进度单调不减：短链两段式跳转会重复 onPageFinished，0.6 的阶段可能被 0.22 重写 → 回跳
+        val mono = if (state.value.running && p < state.value.progress) state.value.progress else p
+        state.value = CaptureState(running = true, progress = mono, status = s, done = null)
+        updateNotif(mono, s)
     }
 
     /* ───────────── 通知/通道 ───────────── */
