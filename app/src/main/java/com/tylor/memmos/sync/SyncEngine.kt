@@ -253,6 +253,19 @@ object SyncEngine {
         var down = 0
         val vaultDir = java.io.File(ctx.filesDir, "vault").apply { mkdirs() }
         // 进度同样只统计需要下载的项（非帖子 md + 缺失附件；已最新不计入）
+        fun isBinaryHead(f: java.io.File): Boolean {
+            val head = runCatching {
+                f.inputStream().use { it.readNBytes(16) }
+            }.getOrNull() ?: return false
+            val b = head
+            return (b.size > 2 && b[0] == 0xFF.toByte() && b[1] == 0xD8.toByte()) || // jpg
+                (b.size > 4 && b[0] == 0x89.toByte() && b[1] == 0x50.toByte()) || // png
+                (b.size > 4 && b[0] == 0x25.toByte() && b[1] == 0x50.toByte()) || // %PDF
+                (b.size > 4 && b[0] == 0x50.toByte() && b[1] == 0x4B.toByte()) || // PK(zip/docx)
+                (b.size > 12 && String(b, 4, 4) == "ftyp") || // mp4/mov
+                (b.size > 3 && b[0] == 0x49.toByte() && b[1] == 0x44.toByte() && b[2] == 0x33.toByte()) // id3
+        }
+
         fun needFile(path: String, item: SyncClient.InvItem): Boolean {
             if (isPostMd(path)) return false
             if (path.endsWith(".md", true)) {
@@ -263,20 +276,6 @@ object SyncEngine {
             // 已存在且为合法二进制内容才跳过（旧版把媒体当 md 下载过，留下的是乱码文本）
             val f = java.io.File(vaultDir, path)
             return !(f.exists() && f.length() > 0 && isBinaryHead(f))
-        }
-
-        fun isBinaryHead(f: java.io.File): Boolean {
-            val head = runCatching {
-                f.inputStream().use { it.readNBytes(16) }
-            }.getOrNull() ?: return false
-            val b = head
-            val ok = (b.size > 2 && b[0] == 0xFF.toByte() && b[1] == 0xD8.toByte()) || // jpg
-                (b.size > 4 && b[0] == 0x89.toByte() && b[1] == 0x50.toByte()) || // png
-                (b.size > 4 && b[0] == 0x25.toByte() && b[1] == 0x50.toByte()) || // %PDF
-                (b.size > 4 && b[0] == 0x50.toByte() && b[1] == 0x4B.toByte()) || // PK(zip/docx)
-                (b.size > 12 && String(b, 4, 4) == "ftyp") || // mp4/mov
-                (b.size > 3 && b[0] == 0x49.toByte() && b[1] == 0x44.toByte() && b[2] == 0x33.toByte()) // id3
-            return ok
         }
         val needDown = remote.count { (path, item) -> needFile(path, item) }
         android.util.Log.d(
