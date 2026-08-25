@@ -96,7 +96,6 @@ import com.tylor.memmos.sync.SyncClient
 import com.tylor.memmos.sync.SyncEngine
 import com.tylor.memmos.sync.SyncPrefs
 import com.tylor.memmos.ui.clips.ClipDetailActivity
-import com.tylor.memmos.ui.fetch.ClipFetchActivity
 import com.tylor.memmos.ui.fetch.XhsCaptureService
 import com.tylor.memmos.ui.login.XhsLoginActivity
 import com.tylor.memmos.ui.viewer.FileViewerActivity
@@ -191,9 +190,8 @@ fun MainTabs(clipCapture: Boolean = false) {
         }.getOrDefault("")
         val url = XhsFetcher.extractUrl(clip)
         if (url != null) {
-            ctx.startActivity(
-                Intent(ctx, ClipFetchActivity::class.java).putExtra(ClipFetchActivity.EXTRA_TEXT, clip),
-            )
+            // 与悬浮窗一致：走后台管线（进度在通知/悬浮窗），不在主页再开一个前台抓取页
+            XhsCaptureService.start(ctx, clip)
         } else {
             message = "剪贴板里没有小红书链接——在小红书点「分享 → 复制链接」后，再点悬浮窗的「抓取当前笔记」"
         }
@@ -257,9 +255,9 @@ fun MainTabs(clipCapture: Boolean = false) {
                     Tab.CAPTURE -> CapturePage(
                         clips = clips, busy = false, message = message,
                         onFetch = { text ->
-                            ctx.startActivity(
-                                Intent(ctx, ClipFetchActivity::class.java).putExtra(ClipFetchActivity.EXTRA_TEXT, text),
-                            )
+                            // 统一后台管线（与悬浮窗「抓取当前笔记」同一实现）：避免两套抓取逻辑不一致
+                            XhsCaptureService.start(ctx, text)
+                            message = "已在后台开始抓取：进度见通知栏/悬浮窗"
                         },
                         onOpen = { ctx.startActivity(Intent(ctx, ClipDetailActivity::class.java).putExtra("id", it.id)) },
                     )
