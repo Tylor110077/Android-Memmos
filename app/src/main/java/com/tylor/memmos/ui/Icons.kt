@@ -125,18 +125,18 @@ fun IconVolumeSpeaker(size: Dp, tint: Color, modifier: Modifier = Modifier) = Gl
     )
 }
 
-/** 设置齿轮（简洁版）：6 齿细弧 + 细环 + 小孔，线条更轻 */
+/** 设置齿轮：6 齿细弧 + 中环 + 中孔，占满 24 视口（与靶心/四宫格同视觉重量） */
 @Composable
-fun IconGear(size: Dp, tint: Color, modifier: Modifier = Modifier) = GlyphIcon(size, tint, modifier, strokeWidth = 1.5f) { _ ->
-    val tooth = Stroke(width = 2.6f, cap = StrokeCap.Butt)
+fun IconGear(size: Dp, tint: Color, modifier: Modifier = Modifier) = GlyphIcon(size, tint, modifier, strokeWidth = 1.6f) { _ ->
+    val tooth = Stroke(width = 2.9f, cap = StrokeCap.Butt)
     for (a in 0 until 360 step 60) {
         drawArc(
-            tint, startAngle = (a - 9f), sweepAngle = 18f, useCenter = false,
-            topLeft = Offset(4.8f, 4.8f), size = Size(14.4f, 14.4f), style = tooth,
+            tint, startAngle = (a - 10f), sweepAngle = 20f, useCenter = false,
+            topLeft = Offset(3.4f, 3.4f), size = Size(17.2f, 17.2f), style = tooth,
         )
     }
-    drawCircle(tint, radius = 5f, center = Offset(12f, 12f), style = Stroke(width = 2f, cap = StrokeCap.Butt))
-    drawCircle(tint, radius = 2f, center = Offset(12f, 12f), style = Stroke(width = 1.5f, cap = StrokeCap.Butt))
+    drawCircle(tint, radius = 5.9f, center = Offset(12f, 12f), style = Stroke(width = 2.1f, cap = StrokeCap.Butt))
+    drawCircle(tint, radius = 2.4f, center = Offset(12f, 12f), style = Stroke(width = 1.6f, cap = StrokeCap.Butt))
 }
 
 @Composable
@@ -199,14 +199,18 @@ fun IconCircleCheck(size: Dp, tint: Color, modifier: Modifier = Modifier) = Glyp
     drawPath(p, tint, style = st)
 }
 
-/** 捕捉/扫描：四角括号 + 中心环（岛屿底栏「捕捉」项） */
+/**
+ * 捕捉/扫描（岛屿底栏「捕捉」项）：圆形靶心——外圆 + 四向短刻度 + 实心中心点。
+ * 与「剪藏库」的四宫格方块在形状上明确区分（圆 vs 方）。
+ */
 @Composable
 fun IconScan(size: Dp, tint: Color, modifier: Modifier = Modifier) = GlyphIcon(size, tint, modifier) { st ->
-    line(4f, 9f, 4f, 4f, st, tint); line(4f, 4f, 9f, 4f, st, tint)
-    line(15f, 4f, 20f, 4f, st, tint); line(20f, 4f, 20f, 9f, st, tint)
-    line(20f, 15f, 20f, 20f, st, tint); line(20f, 20f, 15f, 20f, st, tint)
-    line(9f, 20f, 4f, 20f, st, tint); line(4f, 20f, 4f, 15f, st, tint)
-    drawCircle(tint, radius = 3f, center = Offset(12f, 12f), style = st)
+    drawCircle(tint, radius = 6.6f, center = Offset(12f, 12f), style = st)
+    drawCircle(tint, radius = 2.1f, center = Offset(12f, 12f))
+    line(12f, 2.0f, 12f, 4.6f, st, tint)
+    line(12f, 19.4f, 12f, 22.0f, st, tint)
+    line(2.0f, 12f, 4.6f, 12f, st, tint)
+    line(19.4f, 12f, 22.0f, 12f, st, tint)
 }
 
 /** 剪藏库：四宫格圆角方块（岛屿底栏「剪藏库」项） */
