@@ -447,6 +447,9 @@ class FloatingService : Service() {
                     onClose = { removePanel(animated = true) },
                     onCaptureCurrent = { tryCaptureCurrent() },
                     onOpenNote = { id ->
+                        // 先收起面板再跳详情：悬浮窗叠在详情页上会挡视线（用户要求自动收起）
+                        model.sheetOpen.value = false
+                        removePanel(animated = true)
                         startActivity(
                             Intent(this@FloatingService, ClipDetailActivity::class.java)
                                 .putExtra("id", id)
