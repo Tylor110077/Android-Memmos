@@ -156,7 +156,7 @@ private fun DetailContent(initial: ClipNote) {
                     .clip(RoundedCornerShape(11.dp))
                     .clickable { (ctx as? ComponentActivity)?.finish() },
                 contentAlignment = Alignment.Center,
-            ) { Text("←", color = TextHi, fontSize = 20.sp) }
+            ) { Text("←", color = TextHi, fontSize = 24.sp) }
             Spacer(Modifier.width(10.dp))
             Text("剪藏详情", color = TextHi, fontSize = 16.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.weight(1f))
