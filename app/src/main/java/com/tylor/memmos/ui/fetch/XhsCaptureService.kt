@@ -88,8 +88,12 @@ class XhsCaptureService : Service() {
                 state.value = CaptureState(done = false, status = "未识别到链接")
                 stopSelf()
             } else {
-                // 正在抓另一条：入队排队（原来直接忽略 → 用户的第二条"漏抓"）
-                pendingQueue.add(text)
+                // 正在抓另一条：入队排队（原来直接忽略 → 用户的第二条"漏抓"）。
+                // 去重 + 上限 5：避免历史积压/重复请求堆积造成一次性补跑出几十条
+                if (pendingQueue.none { it == text }) {
+                    if (pendingQueue.size >= 5) pendingQueue.pollFirst()
+                    pendingQueue.add(text)
+                }
             }
             return START_NOT_STICKY
         }
@@ -205,7 +209,14 @@ class XhsCaptureService : Service() {
                 val jsVideo = parsed.optString("video").takeIf { it.startsWith("http") }
                 val netVideo = jsVideo ?: videoCandidates.firstOrNull { it.startsWith("http") }
                 val noteId = parsed.optString("noteId").ifBlank {
-                    noteUrl.substringAfterLast('/').substringBefore('?')
+                    // 落点必须是笔记页（explore/discovery/item）：合集/主页/失效跳转不保存
+                    val m = Regex("""(?:discovery/item|explore)/([a-zA-Z0-9]+)""")
+                        .find(webFinalUrl ?: noteUrl)?.groupValues?.get(1)
+                    m ?: run {
+                        val v = webView ?: null
+                        fail("页面不是笔记页（可能是合集/主页/失效跳转），请用原贴完整链接抓取")
+                        return@evaluateJavascript
+                    }
                 }
                 val note = ClipNote(
                     id = noteId,
@@ -343,8 +354,10 @@ class XhsCaptureService : Service() {
         updateNotif(1f, if (videoPending) "抓取完成，视频后台保存中" else "抓取完成")
         stopForeground(false)
         nm.notify(NOTIF_ID, notif(1f, "抓取完成 ✓", done = true))
-        handler.postDelayed({ stopSelf() }, 4000)
-        pollPending()
+        // 队列空才停：否则处理下一个排队项（stopSelf 会杀 coroutine，把正在抓的第二个请求中断）
+        handler.postDelayed({
+            if (pendingQueue.isEmpty()) stopSelf() else pollPending()
+        }, 4000)
     }
 
     /** 串行处理排队中的抓取请求（原来并发请求被直接忽略 → 漏抓） */
@@ -363,8 +376,9 @@ class XhsCaptureService : Service() {
         updateNotif(0f, msg)
         stopForeground(true)
         nm.notify(NOTIF_ID, notif(0f, msg, done = true))
-        handler.postDelayed({ stopSelf() }, 3000)
-        pollPending()
+        handler.postDelayed({
+            if (pendingQueue.isEmpty()) stopSelf() else pollPending()
+        }, 3000)
     }
 
     private fun update(p: Float, s: String) {
