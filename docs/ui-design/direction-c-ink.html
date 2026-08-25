@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>方向 C · 墨石 Ink — Memmos 安卓配套</title>
+<style>
+/* ============ 页面骨架 ============ */
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0c0a08;color:#e8e2d6;font-family:"PingFang SC","HarmonyOS Sans SC","Microsoft YaHei",sans-serif;padding:48px 40px 80px}
+.serif{font-family:"Songti SC","Noto Serif SC","STSong",serif}
+.dir-head{max-width:1200px;margin-bottom:36px}
+.dir-tag{display:inline-block;font-size:12px;letter-spacing:.34em;color:#b3a1f0;border:1px solid rgba(179,161,240,.35);border-radius:2px;padding:5px 16px;margin-bottom:18px}
+.dir-head h1{font-size:42px;font-weight:600;line-height:1.15;color:#f2ecdf}
+.dir-head h1 em{font-style:normal;color:#a78bfa}
+.dir-head p{margin-top:14px;color:rgba(232,226,214,.58);font-size:15px;line-height:1.9;max-width:720px}
+.swatches{display:flex;gap:10px;margin-top:20px}
+.sw{width:44px;height:44px;border-radius:4px;border:1px solid rgba(232,226,214,.14);position:relative}
+.sw span{position:absolute;top:calc(100% + 6px);left:0;font-size:10px;color:rgba(232,226,214,.45);white-space:nowrap}
+.frames{display:flex;gap:44px;overflow-x:auto;padding:26px 4px 10px}
+figure.frame{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:14px}
+figcaption{text-align:center;font-size:13px;color:#e8e2d6;font-weight:600}
+figcaption em{display:block;font-style:normal;font-weight:400;font-size:11px;color:rgba(232,226,214,.4);margin-top:4px}
+
+/* ============ 手机壳 ============ */
+.phone{width:400px;height:844px;background:#211c17;border-radius:56px;padding:10px;box-shadow:0 0 0 2px #000,inset 0 0 0 1.5px rgba(232,226,214,.12),0 30px 70px rgba(0,0,0,.75)}
+.screen{position:relative;width:100%;height:100%;border-radius:46px;overflow:hidden;background:#16120e}
+
+/* ============ 小红书宿主场景（压暗处理） ============ */
+.xhs{position:absolute;inset:0;background:#12100c;color:#ddd;display:flex;flex-direction:column;filter:saturate(.55) brightness(.82)}
+.xhs-top{display:flex;align-items:center;justify-content:center;gap:22px;padding:20px 18px 12px;font-size:15px;color:rgba(221,221,221,.5);position:relative}
+.xhs-top b{color:#eee;font-size:17px;font-weight:700}
+.xhs-top .x-search{position:absolute;right:20px;color:rgba(221,221,221,.7)}
+.xhs-grid{flex:1;display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:4px 12px 12px;align-content:start;overflow:hidden}
+.xcard{border-radius:10px;overflow:hidden;background:rgba(255,255,255,.04)}
+.xcover{height:118px;position:relative}
+.xcover.play::after{content:"";position:absolute;left:8px;bottom:8px;width:22px;height:22px;border-radius:50%;background:rgba(0,0,0,.55) url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>') center/12px no-repeat}
+.xt{font-size:12px;line-height:1.45;padding:8px 10px 6px;color:rgba(230,225,215,.9)}
+.xm{display:flex;align-items:center;gap:6px;padding:0 10px 10px;font-size:10px;color:rgba(221,221,221,.4)}
+.xm .av{width:14px;height:14px;border-radius:50%}
+.g1{background:linear-gradient(135deg,#3a3040,#77617f)}.g2{background:linear-gradient(135deg,#26332f,#5e7f70)}
+.g3{background:linear-gradient(135deg,#40301f,#96774e)}.g4{background:linear-gradient(135deg,#28303f,#66788f)}
+.g5{background:linear-gradient(135deg,#3f2530,#96606f)}.g6{background:linear-gradient(135deg,#313a24,#74875a)}
+.xhs-nav{display:flex;justify-content:space-around;align-items:center;padding:12px 0 26px;border-top:1px solid rgba(255,255,255,.07);font-size:10px;color:rgba(221,221,221,.45)}
+.xhs-nav .nav-i{display:flex;flex-direction:column;align-items:center;gap:3px}
+.xhs-nav .fab{width:40px;height:28px;border-radius:10px;background:#c2404f;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:16px;margin-top:-14px;border:2.5px solid #12100c}
+.dim{position:absolute;inset:0;background:rgba(8,6,4,.5)}
+
+/* ============ 图标 ============ */
+.i{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:0 0 auto}
+
+/* ============ 方向C核心：贴边滑块（墨条） ============ */
+.tab{position:absolute;left:0;top:62%;transform:translateY(-50%);width:10px;height:98px;
+  background:linear-gradient(to bottom,rgba(139,124,246,.35),rgba(139,124,246,.9),rgba(139,124,246,.35));
+  border-radius:0 6px 6px 0;display:flex;align-items:center;justify-content:flex-end;padding-right:0;
+  box-shadow:2px 0 14px rgba(139,124,246,.25)}
+.tab .dia{width:8px;height:8px;background:#16120e;border:1.5px solid #b3a1f0;transform:rotate(45deg);margin-right:1px;border-radius:1px}
+
+/* 拖拽态：墨点跟随，边缘出现细紫轨 */
+.tab.dragging{width:14px;height:130px;box-shadow:4px 0 26px rgba(139,124,246,.5)}
+.edge-track{position:absolute;border-left:1px dashed rgba(179,161,240,.3);pointer-events:none}
+.edge-track.v{top:90px;bottom:150px;width:14px}
+.edge-track.h{left:60px;right:60px;height:14px;border-left:none;border-top:1px dashed rgba(179,161,240,.3)}
+.edge-track.hot{border-color:#a78bfa}
+.magnet-tip{position:absolute;left:auto;right:46px;top:63%;transform:translateY(-50%);background:#1d1915;border:1px solid rgba(179,161,240,.3);
+  color:#e8e2d6;font-size:11px;padding:8px 14px;border-radius:2px;display:flex;align-items:center;gap:7px;letter-spacing:.06em}
+.magnet-tip b{color:#b3a1f0;font-weight:600}
+.touch-dot{position:absolute;width:46px;height:46px;border-radius:50%;background:radial-gradient(circle,rgba(179,161,240,.2),rgba(179,161,240,0) 70%)}
+
+/* ============ 功能面板（纸墨卡） ============ */
+.panel{position:absolute;top:0;bottom:0;left:0;width:86%;background:#1a1611;
+  border-right:1px solid rgba(179,161,240,.16);box-shadow:24px 0 60px rgba(0,0,0,.55);
+  padding:24px 20px 22px;display:flex;flex-direction:column;gap:15px;overflow:hidden}
+.panel::before{content:"";position:absolute;inset:0;pointer-events:none;
+  background-image:radial-gradient(rgba(255,255,255,.028) 1px,transparent 1px);background-size:5px 5px}
+.p-head{display:flex;align-items:baseline;gap:10px}
+.p-title{font-family:"Songti SC","Noto Serif SC","STSong",serif;font-size:19px;font-weight:700;letter-spacing:.08em;color:#f2ecdf}
+.p-chip{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:10px;letter-spacing:.05em;color:#8fd4ab;
+  border:1px solid rgba(127,201,168,.35);padding:4px 10px;border-radius:2px;white-space:nowrap}
+.p-chip .st{width:4px;height:4px;border-radius:50%;background:#7fc9a8;box-shadow:0 0 5px #7fc9a8}
+.p-close{color:rgba(232,226,214,.45);display:flex;align-self:center}
+.detect{display:flex;align-items:center;gap:9px;font-size:11px;letter-spacing:.03em;color:rgba(232,226,214,.62);
+  border-bottom:1px solid rgba(179,161,240,.14);padding-bottom:11px}
+.detect .xhs-logo{width:19px;height:19px;border-radius:4px;background:#c2404f;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff}
+.detect b{color:#f2ecdf;font-weight:600}
+.detect .url{margin-left:auto;color:rgba(232,226,214,.32);font-size:10px;letter-spacing:.02em}
+.card{border:1px solid rgba(232,226,214,.09);border-radius:3px;overflow:hidden;background:rgba(255,255,255,.018)}
+.cover{height:148px;position:relative}
+.cover .play{position:absolute;left:10px;bottom:10px;width:30px;height:30px;border-radius:50%;background:rgba(10,8,6,.65);display:flex;align-items:center;justify-content:center;color:#fff}
+.cover .dur{position:absolute;right:10px;bottom:10px;font-size:10px;background:rgba(10,8,6,.7);padding:3px 8px;border-radius:2px;color:#ddd}
+.cover .imgs{position:absolute;left:10px;top:10px;font-size:10px;background:rgba(10,8,6,.6);padding:3px 8px;border-radius:2px;color:rgba(221,221,221,.85)}
+.card-body{padding:13px 14px;display:flex;flex-direction:column;gap:10px}
+.card-title{font-family:"Songti SC","Noto Serif SC","STSong",serif;font-size:16.5px;font-weight:700;line-height:1.45;color:#f2ecdf}
+.author{display:flex;align-items:center;gap:8px}
+.author .av{width:23px;height:23px;border-radius:50%;background:linear-gradient(135deg,#77617f,#3a3040)}
+.author .nm{font-size:11.5px;color:rgba(232,226,214,.72)}
+.follow{margin-left:auto;font-size:10px;color:#b3a1f0;border:1px solid rgba(179,161,240,.4);border-radius:2px;padding:3px 11px;letter-spacing:.08em}
+.stats{display:flex;gap:18px;font-size:11px;color:rgba(232,226,214,.5);letter-spacing:.03em}
+.stats span{display:flex;align-items:center;gap:5px}
+.sect-label{font-size:10px;letter-spacing:.34em;color:rgba(179,161,240,.6);margin-top:2px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{display:flex;align-items:center;gap:6px;font-size:11px;color:#cdc3f5;background:rgba(139,124,246,.1);
+  border:1px solid rgba(139,124,246,.38);border-radius:2px;padding:6px 12px;letter-spacing:.04em}
+.chip.off{color:rgba(232,226,214,.4);background:transparent;border-color:rgba(232,226,214,.14)}
+.thought{border:1px dashed rgba(179,161,240,.3);border-radius:3px;padding:13px 14px;display:flex;flex-direction:column;gap:11px;background:rgba(139,124,246,.03)}
+.thought .ph{font-size:12.5px;color:rgba(232,226,214,.35)}
+.thought-row{display:flex;align-items:center;gap:8px}
+.mic-btn{margin-left:auto;width:36px;height:36px;border-radius:50%;border:1px solid rgba(139,124,246,.55);background:rgba(139,124,246,.12);display:flex;align-items:center;justify-content:center;color:#b3a1f0}
+.tag-sug{display:flex;gap:7px;flex-wrap:wrap}
+.tag{font-size:10px;color:rgba(232,226,214,.5);border-bottom:1px dashed rgba(179,161,240,.4);padding:3px 2px;letter-spacing:.04em}
+.cta{margin-top:auto;height:52px;border-radius:3px;background:linear-gradient(160deg,#8b7cf6,#6d54d8);display:flex;align-items:center;justify-content:center;
+  font-size:14px;font-weight:600;color:#14101d;letter-spacing:.12em;box-shadow:0 10px 30px rgba(109,84,216,.3)}
+.cta.done{background:transparent;border:1px solid rgba(127,201,168,.5);color:#8fd4ab;box-shadow:none}
+.dest{font-size:10.5px;color:rgba(232,226,214,.4);text-align:center;letter-spacing:.04em}
+.dest code{color:#cdb9ff;background:rgba(139,124,246,.1);padding:2px 8px;border-radius:2px}
+
+/* 语音态 */
+.rec-card{border:1px solid rgba(139,124,246,.5);border-radius:3px;padding:17px 15px;display:flex;flex-direction:column;gap:13px;background:rgba(139,124,246,.05)}
+.wave{display:flex;align-items:center;gap:3px;height:38px}
+.wave i{flex:1;background:linear-gradient(to top,#6d54d8,#b3a1f0);border-radius:1px;animation:wv 1.1s ease-in-out infinite}
+@keyframes wv{0%,100%{height:20%}50%{height:95%}}
+.rec-meta{display:flex;align-items:center;justify-content:space-between;font-size:10.5px;letter-spacing:.1em;color:rgba(232,226,214,.6)}
+.rec-meta .rec{display:flex;align-items:center;gap:7px;color:#cdb9ff;font-weight:600}
+.rec-meta .rec i{width:7px;height:7px;border-radius:50%;background:#8b7cf6;animation:blink 1s steps(2) infinite}
+@keyframes blink{50%{opacity:.15}}
+.transcript{font-family:"Songti SC","Noto Serif SC","STSong",serif;font-size:13px;line-height:1.9;color:rgba(232,226,214,.55);border-top:1px dashed rgba(179,161,240,.25);padding-top:11px}
+.transcript b{color:#e8e2d6;font-weight:600}
+
+/* 进度 */
+.prog{display:flex;flex-direction:column;gap:13px}
+.prow{display:flex;align-items:center;gap:11px;font-size:12px;color:rgba(232,226,214,.8);letter-spacing:.03em}
+.prow .ic{width:31px;height:31px;border-radius:2px;border:1px solid rgba(232,226,214,.12);display:flex;align-items:center;justify-content:center;color:rgba(232,226,214,.6)}
+.prow .ok{color:#8fd4ab}
+.bar{flex:1;height:3px;border-radius:0;background:rgba(232,226,214,.1);overflow:hidden;min-width:64px}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,#6d54d8,#b3a1f0);position:relative}
+.bar.run i::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(203,185,255,.7),transparent);animation:shm 1.2s linear infinite}
+@keyframes shm{from{transform:translateX(-100%)}to{transform:translateX(100%)}}
+.prow .val{font-size:10.5px;color:rgba(232,226,214,.45);min-width:58px;text-align:right;letter-spacing:.05em}
+.done-block{border:1px solid rgba(127,201,168,.4);border-radius:3px;padding:15px;display:flex;flex-direction:column;gap:9px;background:rgba(127,201,168,.05)}
+.done-top{display:flex;align-items:center;gap:9px;font-family:"Songti SC","Noto Serif SC","STSong",serif;font-size:14.5px;font-weight:700;color:#8fd4ab}
+.path-chip{font-size:10.5px;color:#cdb9ff;background:rgba(139,124,246,.08);border-radius:2px;padding:7px 10px;line-height:1.6;letter-spacing:.02em}
+.recent{display:flex;flex-direction:column}
+.rrow{display:flex;align-items:center;gap:11px;padding:9px 2px;border-bottom:1px solid rgba(232,226,214,.07)}
+.rrow:last-child{border-bottom:none}
+.rrow .th{width:34px;height:34px;border-radius:2px}
+.rrow .ti{font-size:12px;color:rgba(232,226,214,.82)}
+.rrow .tm{margin-left:auto;font-size:10px;color:rgba(232,226,214,.32);letter-spacing:.06em}
+.divider-cap{display:flex;align-items:center;gap:12px;font-size:10px;color:rgba(232,226,214,.35);letter-spacing:.34em}
+.divider-cap::before,.divider-cap::after{content:"";flex:1;height:1px;background:rgba(232,226,214,.09)}
+
+/* 设置抽屉 */
+.sheet{position:absolute;left:0;right:0;bottom:0;height:82%;border-radius:10px 10px 0 0;background:#1a1611;
+  border-top:1px solid rgba(179,161,240,.2);padding:20px 22px 26px;display:flex;flex-direction:column;gap:16px;box-shadow:0 -20px 60px rgba(0,0,0,.6)}
+.sheet-grab{width:34px;height:3px;border-radius:99px;background:rgba(232,226,214,.22);margin:0 auto}
+.sheet-head{display:flex;align-items:baseline;justify-content:space-between}
+.sheet-head b{font-family:"Songti SC","Noto Serif SC","STSong",serif;font-size:18px;font-weight:700;letter-spacing:.1em;color:#f2ecdf}
+.sheet-head .fin{font-size:12px;color:#b3a1f0;letter-spacing:.14em}
+.f-label{font-size:10px;letter-spacing:.3em;color:rgba(179,161,240,.6)}
+.pos-widget{display:flex;gap:15px;align-items:center}
+.phone-outline{width:74px;height:128px;border:1px solid rgba(232,226,214,.3);border-radius:8px;position:relative;flex:0 0 auto}
+.poz{position:absolute;display:flex;align-items:center;justify-content:center;color:rgba(232,226,214,.35);font-size:9px}
+.poz.l{left:-6px;top:34%;bottom:34%;width:12px}.poz.r{right:-6px;top:34%;bottom:34%;width:12px}
+.poz.t{top:-6px;left:32%;right:32%;height:12px}.poz.b{bottom:-6px;left:32%;right:32%;height:12px}
+.poz.on{background:#8b7cf6;border-radius:99px;color:transparent;box-shadow:0 0 10px rgba(139,124,246,.6)}
+.pos-desc{font-size:11.5px;color:rgba(232,226,214,.55);line-height:1.8}
+.pos-desc b{color:#cdb9ff;font-weight:600}
+.srow{display:flex;align-items:center;gap:12px;font-size:12px;color:rgba(232,226,214,.75);letter-spacing:.04em}
+.slider{flex:1;height:2px;background:rgba(232,226,214,.14);position:relative}
+.slider i{position:absolute;left:0;top:0;bottom:0;background:#8b7cf6}
+.slider u{position:absolute;top:50%;width:13px;height:13px;background:#16120e;border:1.5px solid #b3a1f0;transform:translateY(-50%) rotate(45deg)}
+.sval{font-size:10.5px;color:rgba(232,226,214,.45);min-width:34px;text-align:right}
+.trow{display:flex;align-items:center;justify-content:space-between;font-size:12.5px;color:rgba(232,226,214,.8);padding:3px 0}
+.trow small{display:block;font-size:10px;color:rgba(232,226,214,.38);margin-top:3px;letter-spacing:.03em}
+.switch{width:38px;height:20px;border-radius:99px;background:#6d54d8;position:relative;flex:0 0 auto}
+.switch::after{content:"";position:absolute;right:3px;top:3px;width:14px;height:14px;border-radius:50%;background:#16120e;border:1px solid #b3a1f0}
+.pair-card{border:1px solid rgba(232,226,214,.1);border-radius:3px;padding:14px;display:flex;align-items:center;gap:12px}
+.pair-card .pc-ic{width:37px;height:37px;border-radius:2px;border:1px solid rgba(179,161,240,.35);display:flex;align-items:center;justify-content:center;color:#b3a1f0}
+.pair-card .pc-nm{font-family:"Songti SC","Noto Serif SC","STSong",serif;font-size:13.5px;font-weight:700;color:#f2ecdf}
+.pair-card .pc-st{font-size:10px;color:#8fd4ab;display:flex;align-items:center;gap:5px;margin-top:4px;letter-spacing:.06em}
+.pair-card .pc-st i{width:4px;height:4px;border-radius:50%;background:#7fc9a8;box-shadow:0 0 5px #7fc9a8}
+.repair{margin-left:auto;font-size:10.5px;letter-spacing:.1em;color:rgba(232,226,214,.6);border:1px solid rgba(232,226,214,.2);border-radius:2px;padding:7px 13px}
+.pair-hint{font-size:10.5px;color:rgba(232,226,214,.38);line-height:1.8;letter-spacing:.03em}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}}
+</style>
+</head>
+<body>
+
+<header class="dir-head">
+  <span class="dir-tag">DIRECTION C</span>
+  <h1 class="serif">墨石 <em>Ink</em></h1>
+  <p>暖黑纸墨底、发丝级描边、宋体标题、Obsidian 紫作为唯一墨彩。定位是「书房的延伸」——
+    与桌面端 Memmos Graph 的知识气质同源：安静、克制、耐看，捕捉的是思想而不是流量。</p>
+  <div class="swatches">
+    <div class="sw" style="background:#1a1611"><span>纸墨底</span></div>
+    <div class="sw" style="background:linear-gradient(135deg,#8b7cf6,#6d54d8)"><span>Obsidian 紫</span></div>
+    <div class="sw" style="background:#7fc9a8"><span>玉色成功</span></div>
+    <div class="sw" style="background:#f2ecdf"><span>宣纸白</span></div>
+  </div>
+</header>
+
+<div class="frames">
+
+<!-- ═══════════ 场景1 待机 ═══════════ -->
+<figure class="frame">
+  <div class="phone"><div class="screen">
+    <div class="xhs">
+      <div class="xhs-top"><span>关注</span><b>发现</b><span>附近</span><svg class="i x-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></div>
+      <div class="xhs-grid">
+        <div class="xcard"><div class="xcover g1"></div><div class="xt">独居一年，我把出租屋改成了样子</div><div class="xm"><i class="av g5"></i>阿绵 · 赞 3.2万</div></div>
+        <div class="xcard"><div class="xcover play g2"></div><div class="xt">一个人自律的100天，我悟了</div><div class="xm"><i class="av g4"></i>山野拾光 · 赞 1.2万</div></div>
+        <div class="xcard"><div class="xcover g3"></div><div class="xt">手冲入门｜三支豆子横评</div><div class="xm"><i class="av g6"></i>豆贩子 · 赞 8941</div></div>
+        <div class="xcard"><div class="xcover play g4"></div><div class="xt">通勤背包开箱，能装下整个生活</div><div class="xm"><i class="av g1"></i>Kiko · 赞 6720</div></div>
+      </div>
+      <div class="xhs-nav"><span class="nav-i">首页</span><span class="nav-i">市集</span><span class="fab">+</span><span class="nav-i">消息</span><span class="nav-i">我</span></div>
+    </div>
+    <div class="tab"><span class="dia"></span></div>
+  </div></div>
+  <figcaption>01 · 待机<em>一道紫墨细线嵌在纸面上</em></figcaption>
+</figure>
+
+<!-- ═══════════ 场景2 拖拽吸附 ═══════════ -->
+<figure class="frame">
+  <div class="phone"><div class="screen">
+    <div class="xhs">
+      <div class="xhs-top"><span>关注</span><b>发现</b><span>附近</span><svg class="i x-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></div>
+      <div class="xhs-grid">
+        <div class="xcard"><div class="xcover g1"></div><div class="xt">独居一年，我把出租屋改成了样子</div><div class="xm"><i class="av g5"></i>阿绵 · 赞 3.2万</div></div>
+        <div class="xcard"><div class="xcover play g2"></div><div class="xt">一个人自律的100天，我悟了</div><div class="xm"><i class="av g4"></i>山野拾光 · 赞 1.2万</div></div>
+        <div class="xcard"><div class="xcover g3"></div><div class="xt">手冲入门｜三支豆子横评</div><div class="xm"><i class="av g6"></i>豆贩子 · 赞 8941</div></div>
+        <div class="xcard"><div class="xcover play g4"></div><div class="xt">通勤背包开箱，能装下整个生活</div><div class="xm"><i class="av g1"></i>Kiko · 赞 6720</div></div>
+      </div>
+      <div class="xhs-nav"><span class="nav-i">首页</span><span class="nav-i">市集</span><span class="fab">+</span><span class="nav-i">消息</span><span class="nav-i">我</span></div>
+    </div>
+    <div class="dim"></div>
+    <div class="edge-track v" style="right:8px"></div>
+    <div class="edge-track v" style="left:8px"></div>
+    <div class="edge-track h" style="top:66px"></div>
+    <div class="edge-track h hot" style="bottom:106px"></div>
+    <div class="tab dragging" style="left:auto;right:0;top:70%"><span class="dia"></span></div>
+    <div class="touch-dot" style="right:-8px;top:69%"></div>
+    <div class="magnet-tip">松手落墨于<b>右缘</b></div>
+  </div></div>
+  <figcaption>02 · 长按拖动<em>边缘浮现细紫轨，吸附即「落墨」</em></figcaption>
+</figure>
+
+<!-- ═══════════ 场景3 识别帖子 ═══════════ -->
+<figure class="frame">
+  <div class="phone"><div class="screen">
+    <div class="xhs">
+      <div class="xhs-top"><span>关注</span><b>发现</b><span>附近</span></div>
+      <div class="xhs-grid">
+        <div class="xcard"><div class="xcover g5"></div><div class="xt">秋冬第一件针织衫这样选</div><div class="xm"><i class="av g3"></i>软软 · 赞 2100</div></div>
+        <div class="xcard"><div class="xcover g6"></div><div class="xt">阳台种菜两个月实录</div><div class="xm"><i class="av g2"></i>绿手指 · 赞 5560</div></div>
+      </div>
+      <div class="xhs-nav"><span class="nav-i">首页</span><span class="nav-i">市集</span><span class="fab">+</span><span class="nav-i">消息</span><span class="nav-i">我</span></div>
+    </div>
+    <div class="dim" style="background:rgba(8,6,4,.3)"></div>
+    <div class="panel">
+      <div class="p-head">
+        <span class="p-title">Memmos · 捕捉</span>
+        <span class="p-chip"><span class="st"></span>已配对 · 局域网</span>
+        <span class="p-close"><svg class="i" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></span>
+      </div>
+      <div class="detect"><span class="xhs-logo">书</span><span>已识别当前帖子</span><span class="url">xhslink.com/Ab3fKz</span></div>
+      <div class="card">
+        <div class="cover g2"><span class="imgs">图片 9 张</span><span class="play"><svg class="i" viewBox="0 0 24 24" style="fill:#fff;stroke:none"><path d="M8 5v14l11-7z"/></svg></span><span class="dur">02:47</span></div>
+        <div class="card-body">
+          <div class="card-title">一个人自律的100天，我悟了</div>
+          <div class="author"><span class="av"></span><span class="nm">山野拾光</span><span class="follow">收录</span></div>
+          <div class="stats">
+            <span><svg class="i" viewBox="0 0 24 24" style="width:13px;height:13px"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.51 4.04 3 5.5l7 7Z"/></svg>1.2万</span>
+            <span><svg class="i" viewBox="0 0 24 24" style="width:13px;height:13px"><path d="M6 3h12v18l-6-4-6 4Z"/></svg>8432</span>
+            <span><svg class="i" viewBox="0 0 24 24" style="width:13px;height:13px"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>356</span>
+          </div>
+        </div>
+      </div>
+      <div class="sect-label">抓 取 内 容</div>
+      <div class="chips">
+        <span class="chip"><svg class="i" viewBox="0 0 24 24" style="width:11px;height:11px"><path d="M20 6 9 17l-5-5"/></svg>原文</span>
+        <span class="chip"><svg class="i" viewBox="0 0 24 24" style="width:11px;height:11px"><path d="M20 6 9 17l-5-5"/></svg>评论 356</span>
+        <span class="chip"><svg class="i" viewBox="0 0 24 24" style="width:11px;height:11px"><path d="M20 6 9 17l-5-5"/></svg>视频</span>
+        <span class="chip off">封面图</span>
+      </div>
+      <div class="sect-label">我 的 感 想</div>
+      <div class="thought">
+        <span class="ph">写下此刻的想法…</span>
+        <div class="thought-row">
+          <span class="tag">#自律</span><span class="tag">#成长记录</span><span class="tag">＋自定义</span>
+          <span class="mic-btn"><svg class="i" viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><path d="M12 18v4"/></svg></span>
+        </div>
+      </div>
+      <div class="cta">整理并同步到 Obsidian</div>
+      <div class="dest">存入 <code>Memmos graph/小红书/</code></div>
+    </div>
+  </div></div>
+  <figcaption>03 · 识别帖子<em>宋体标题 + 发丝描边卡片</em></figcaption>
+</figure>
+
+<!-- ═══════════ 场景4 语音感想 ═══════════ -->
+<figure class="frame">
+  <div class="phone"><div class="screen">
+    <div class="xhs">
+      <div class="xhs-top"><span>关注</span><b>发现</b><span>附近</span></div>
+      <div class="xhs-grid">
+        <div class="xcard"><div class="xcover g4"></div><div class="xt">周末去哪儿｜小众展览清单</div><div class="xm"><i class="av g5"></i>Momo · 赞 980</div></div>
+        <div class="xcard"><div class="xcover g1"></div><div class="xt">极简衣柜断舍离心得</div><div class="xm"><i class="av g6"></i>一一 · 赞 4300</div></div>
+      </div>
+      <div class="xhs-nav"><span class="nav-i">首页</span><span class="nav-i">市集</span><span class="fab">+</span><span class="nav-i">消息</span><span class="nav-i">我</span></div>
+    </div>
+    <div class="dim" style="background:rgba(8,6,4,.3)"></div>
+    <div class="panel">
+      <div class="p-head">
+        <span class="p-title">Memmos · 捕捉</span>
+        <span class="p-chip"><span class="st"></span>已配对 · 局域网</span>
+        <span class="p-close"><svg class="i" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></span>
+      </div>
+      <div class="detect"><span class="xhs-logo">书</span><span>正在为这条帖子记录感想</span></div>
+      <div class="sect-label">我 的 感 想</div>
+      <div class="rec-card">
+        <div class="rec-meta"><span class="rec"><i></i>REC 00:07</span><span>松 手 发 送</span></div>
+        <div class="wave"><i style="animation-delay:0s"></i><i style="animation-delay:.1s"></i><i style="animation-delay:.25s"></i><i style="animation-delay:.05s"></i><i style="animation-delay:.35s"></i><i style="animation-delay:.15s"></i><i style="animation-delay:.4s"></i><i style="animation-delay:.2s"></i><i style="animation-delay:.3s"></i><i style="animation-delay:.45s"></i><i style="animation-delay:.08s"></i><i style="animation-delay:.28s"></i><i style="animation-delay:.38s"></i><i style="animation-delay:.12s"></i><i style="animation-delay:.42s"></i></div>
+        <div class="transcript">今天看到这篇突然想起我坚持晨跑的那段日子…</div>
+      </div>
+      <div class="tag-sug"><span class="tag">#自律</span><span class="tag">#成长记录</span><span class="tag">＋自定义</span></div>
+      <div class="srow" style="justify-content:space-between;font-size:10.5px;color:rgba(232,226,214,.42)">
+        <span>↑ 上滑取消</span><span>松手自动转文字并保留语音</span>
+      </div>
+      <div class="cta">整理并同步到 Obsidian</div>
+      <div class="dest">存入 <code>Memmos graph/小红书/</code></div>
+    </div>
+  </div></div>
+  <figcaption>04 · 语音感想<em>实时转写用宋体呈现「笔录感」</em></figcaption>
+</figure>
+
+<!-- ═══════════ 场景5 进度→完成 ═══════════ -->
+<figure class="frame">
+  <div class="phone"><div class="screen">
+    <div class="xhs">
+      <div class="xhs-top"><span>关注</span><b>发现</b><span>附近</span></div>
+      <div class="xhs-grid">
+        <div class="xcard"><div class="xcover g3"></div><div class="xt">咖啡师不会告诉你的点单技巧</div><div class="xm"><i class="av g2"></i>拿铁因 · 赞 7800</div></div>
+        <div class="xcard"><div class="xcover g6"></div><div class="xt">citywalk 路线分享｜老城区</div><div class="xm"><i class="av g1"></i>走走 · 赞 3400</div></div>
+      </div>
+      <div class="xhs-nav"><span class="nav-i">首页</span><span class="nav-i">市集</span><span class="fab">+</span><span class="nav-i">消息</span><span class="nav-i">我</span></div>
+    </div>
+    <div class="dim" style="background:rgba(8,6,4,.3)"></div>
+    <div class="panel">
+      <div class="p-head">
+        <span class="p-title">抓取进度</span>
+        <span class="p-chip"><span class="st"></span>已配对 · 局域网</span>
+        <span class="p-close"><svg class="i" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></span>
+      </div>
+      <div class="prog">
+        <div class="prow"><span class="ic"><svg class="i" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h6"/></svg></span>原文提取<span class="bar"><i style="width:100%"></i></span><span class="val ok">✓ 完成</span></div>
+        <div class="prow"><span class="ic"><svg class="i" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/></svg></span>图片保存<span class="bar"><i style="width:100%"></i></span><span class="val ok">9 / 9</span></div>
+        <div class="prow"><span class="ic"><svg class="i" viewBox="0 0 24 24"><path d="m5 3 14 9-14 9V3z"/></svg></span>视频下载<span class="bar run"><i style="width:78%"></i></span><span class="val">78%</span></div>
+        <div class="prow"><span class="ic"><svg class="i" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>评论抓取<span class="bar run"><i style="width:60%"></i></span><span class="val">214 / 356</span></div>
+      </div>
+      <div class="divider-cap">完 成 后</div>
+      <div class="done-block">
+        <div class="done-top"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m8.5 12.5 2.5 2.5 5-5.5"/></svg>已收入书斋</div>
+        <div class="path-chip">Memmos graph/小红书/<br>一个人自律的100天.md</div>
+      </div>
+      <div class="sect-label">近 日 剪 藏</div>
+      <div class="recent">
+        <div class="rrow"><span class="th g5"></span><span class="ti">秋冬第一件针织衫这样选</span><span class="tm">刚刚</span></div>
+        <div class="rrow"><span class="th g2"></span><span class="ti">手冲入门｜三支豆子横评</span><span class="tm">昨天</span></div>
+      </div>
+    </div>
+  </div></div>
+  <figcaption>05 · 抓取进度 → 完成<em>细线进度 + 「已收入书斋」回执</em></figcaption>
+</figure>
+
+<!-- ═══════════ 场景6 设置抽屉 ═══════════ -->
+<figure class="frame">
+  <div class="phone"><div class="screen">
+    <div class="xhs">
+      <div class="xhs-top"><span>关注</span><b>发现</b><span>附近</span></div>
+      <div class="xhs-grid">
+        <div class="xcard"><div class="xcover g2"></div><div class="xt">冬日暖桌布置灵感合集</div><div class="xm"><i class="av g3"></i>暖暖 · 赞 1.8万</div></div>
+        <div class="xcard"><div class="xcover g4"></div><div class="xt">效率工具组合拳分享</div><div class="xm"><i class="av g5"></i>白噪音 · 赞 2200</div></div>
+      </div>
+      <div class="xhs-nav"><span class="nav-i">首页</span><span class="nav-i">市集</span><span class="fab">+</span><span class="nav-i">消息</span><span class="nav-i">我</span></div>
+    </div>
+    <div class="dim" style="background:rgba(8,6,4,.6)"></div>
+    <div class="sheet">
+      <span class="sheet-grab"></span>
+      <div class="sheet-head"><b>浮条设置</b><span class="fin">完 成</span></div>
+      <div class="f-label">贴 边 位 置（长按滑块拖动亦可）</div>
+      <div class="pos-widget">
+        <div class="phone-outline">
+          <span class="poz l on"></span><span class="poz r"></span><span class="poz t"></span><span class="poz b"></span>
+        </div>
+        <div class="pos-desc">当前：<b>左缘</b> · 高度 62%<br>吸附后轻微震动确认，双击可临时隐藏 5 秒。</div>
+      </div>
+      <div class="srow">贴边高度<span class="slider"><i style="width:62%"></i><u style="left:calc(62% - 7px)"></u></span><span class="sval">62%</span></div>
+      <div class="srow">大小<span class="slider"><i style="width:45%"></i><u style="left:calc(45% - 7px)"></u></span><span class="sval">中</span></div>
+      <div class="srow">不透明度<span class="slider"><i style="width:75%"></i><u style="left:calc(75% - 7px)"></u></span><span class="sval">75%</span></div>
+      <div class="trow"><span>自动隐藏<small>无操作 10 秒后缩为细线</small></span><span class="switch"></span></div>
+      <div class="trow"><span>仅在小红书内显示<small>关闭后所有 App 内可见</small></span><span class="switch"></span></div>
+      <div class="f-label">设 备 配 对</div>
+      <div class="pair-card">
+        <span class="pc-ic"><svg class="i" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg></span>
+        <span><span class="pc-nm">Tylor 的 MacBook Pro</span><span class="pc-st"><i></i>已连接 · 192.168.1.23</span></span>
+        <span class="repair">重新配对</span>
+      </div>
+      <div class="pair-hint">配对一次即可：同一 Wi-Fi 下两台设备互相发现并自动传输剪藏，全程不经任何服务器。</div>
+    </div>
+  </div></div>
+  <figcaption>06 · 浮条设置<em>菱形滑块钮 + 衬线小节标题</em></figcaption>
+</figure>
+
+</div>
+</body>
+</html>

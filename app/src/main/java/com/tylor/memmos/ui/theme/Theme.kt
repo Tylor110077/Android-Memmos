@@ -1,0 +1,99 @@
+package com.tylor.memmos.ui.theme
+
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+
+/**
+ * 方向 A「琉璃 Glass」色彩令牌 · v3 多源化（docs/ui-design/design-language.md v3）
+ * 设计语言：App 从「小红书专用」升级为多内容源（bilibili/抖音/微博…）通用剪藏——
+ * 品牌色由单红改为「多源光谱」紫→粉→琥珀渐变（每种源一个色相，汇成一条光谱），
+ * 红色只保留语义用途（删除/失败/危险/未授权）。玻璃质感用半透明白叠深底模拟。
+ */
+val AccentRed = Color(0xFFFF2E4D) // 语义红：删除/失败/危险
+val AccentOrange = Color(0xFFFF9E5C) // 语义橙：仅警示（callout warning）
+val AccentAmber = AccentOrange
+
+/* 品牌色：单一紫色（极简 v3.1：用户要求少颜色——一个品牌色 + 三语义色） */
+val AccentViolet = Color(0xFF8B7BFF)
+val AccentVioletSoft = Color(0xFFB4A7FF) // 紫的浅调：链接/高亮文字
+
+/** 品牌强调：同一紫的轻微双调渐变（视觉立体但仍是单色系） */
+val AccentBrush = Brush.linearGradient(listOf(Color(0xFF8B7BFF), Color(0xFF9E8FFF)))
+
+val Ink = Color(0xFF101218) // 屏幕底色
+
+/* 玻璃层：半透明白 + 高光描边 */
+val GlassHi = Color(0x24FFFFFF) // 渐变上端白 .14
+val GlassLo = Color(0x0DFFFFFF) // 渐变下端白 .05
+val GlassFill = Color(0x0DFFFFFF) // 卡片填充白 .05
+val GlassStroke = Color(0x29FFFFFF) // 描边白 .16
+val GlassStrokeSoft = Color(0x17FFFFFF) // 更弱的分隔线白 .09
+
+/* 文字三级 */
+val TextHi = Color(0xFFF2F4F8)
+val TextMid = Color(0xFF9BA1AE)
+val TextFaint = Color(0xFF676D7A)
+
+/* 功能色 */
+val Success = Color(0xFF46C882)
+val ChipBg = Color(0x2E8B7BFF) // 品牌紫 .18 容器
+val ChipStroke = Color(0x668B7BFF) // 品牌紫 .40 描边
+val ChipText = Color(0xFFD9D0FF) // 紫调浅文（原红调 D7DC 已去小红书化）
+
+// 占位封面：单色紫调深浅变体（原六色多源渐变 → 极简统一）
+val CoverGradients = listOf(
+    listOf(Color(0xFF2B2440), Color(0xFF4A3D75)),
+    listOf(Color(0xFF241F38), Color(0xFF3C3260)),
+    listOf(Color(0xFF322A4E), Color(0xFF524480)),
+    listOf(Color(0xFF1F1B30), Color(0xFF342C55)),
+    listOf(Color(0xFF2A2445), Color(0xFF453A6E)),
+    listOf(Color(0xFF241F38), Color(0xFF3F3566)),
+)
+
+/* ───────── 样式规范 v4（参考 Linear/Raycast/Notion/Apple HIG） ───────── */
+
+/** 圆角体系：28 面板 / 16 卡片 / 12 次级容器 / 999 胶囊 */
+object Shapes {
+    val Panel = RoundedCornerShape(28.dp)
+    val Card = RoundedCornerShape(16.dp)
+    val Sub = RoundedCornerShape(12.dp)
+    val Pill = RoundedCornerShape(999.dp)
+}
+
+/** 字阶（4 级正文弱化体系：标题/正文/说明/弱提示） */
+object Type {
+    val Title = 17.sp   // 页面/面板标题 Bold
+    val Sub = 15.sp     // 卡片标题 SemiBold
+    val Body = 13.sp    // 正文
+    val Hint = 11.sp    // 说明
+    val Dim = 10.sp     // 弱提示/元信息
+}
+
+/** 间距栅格（4dp） */
+object Space {
+    const val XS = 4
+    const val S = 8
+    const val M = 12
+    const val L = 16
+    const val XL = 20
+    const val XXL = 24
+}
+
+@Composable
+fun MemmosTheme(content: @Composable () -> Unit) {
+    // 全程深色：本 App 只以悬浮层形态覆盖在宿主上，不跟随系统浅色（决策记录 §5）
+    MaterialTheme(
+        colorScheme = darkColorScheme(
+            primary = AccentViolet,
+            background = Ink,
+            surface = Ink,
+        ),
+        content = content,
+    )
+}

@@ -1,0 +1,10 @@
+<resources>
+    <!-- 深色玻璃主题：避免启动白闪；状态栏/导航栏同色由 enableEdgeToEdge 接管 -->
+    <style name="AppTheme" parent="android:style/Theme.Material.NoActionBar">
+        <item name="android:windowBackground">#FF101218</item>
+        <item name="android:statusBarColor">#FF101218</item>
+        <item name="android:navigationBarColor">#FF101218</item>
+    </style>
+    <!-- 剪贴板桥接页：全透明不可见（后台抓取读剪贴板用，用户无感知） -->
+    <style name="BridgeTheme" parent="@android:style/Theme.Translucent.NoTitleBar" />
+</resources>

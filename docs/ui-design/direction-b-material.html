@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>方向 B · 原生 Material You — Memmos 安卓配套</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ============ 页面骨架 ============ */
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#ece9f4;color:#1c1b1f;font-family:"Plus Jakarta Sans","PingFang SC","HarmonyOS Sans SC","Microsoft YaHei",sans-serif;padding:48px 40px 80px}
+.dir-head{max-width:1200px;margin-bottom:36px}
+.dir-tag{display:inline-block;font-size:12px;font-weight:700;letter-spacing:.2em;color:#a50034;background:#ffdada;border-radius:999px;padding:5px 14px;margin-bottom:16px}
+.dir-head h1{font-size:40px;font-weight:800;line-height:1.15}
+.dir-head p{margin-top:14px;color:#4a4553;font-size:15px;line-height:1.8;max-width:720px}
+.swatches{display:flex;gap:10px;margin-top:20px}
+.sw{width:44px;height:44px;border-radius:12px;border:1px solid rgba(0,0,0,.08);position:relative}
+.sw span{position:absolute;top:calc(100% + 6px);left:0;font-size:10px;color:rgba(28,27,31,.55);white-space:nowrap}
+.frames{display:flex;gap:44px;overflow-x:auto;padding:26px 4px 10px}
+figure.frame{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:14px}
+figcaption{text-align:center;font-size:13px;color:#2b2833;font-weight:700}
+figcaption em{display:block;font-style:normal;font-weight:400;font-size:11px;color:rgba(28,27,31,.5);margin-top:4px}
+
+/* ============ 手机壳 ============ */
+.phone{width:400px;height:844px;background:#fffdf9;border-radius:56px;padding:10px;box-shadow:0 0 0 2px rgba(28,27,31,.85),inset 0 0 0 1.5px rgba(255,255,255,.6),0 30px 70px rgba(60,50,80,.35)}
+.screen{position:relative;width:100%;height:100%;border-radius:46px;overflow:hidden;background:#fffbff}
+
+/* ============ 小红书宿主场景 ============ */
+.xhs{position:absolute;inset:0;background:#fffbff;color:#111;display:flex;flex-direction:column}
+.xhs-top{display:flex;align-items:center;justify-content:center;gap:22px;padding:20px 18px 12px;font-size:15px;color:rgba(17,17,17,.5);position:relative}
+.xhs-top b{color:#111;font-size:17px;font-weight:700}
+.xhs-top .x-search{position:absolute;right:20px;color:rgba(17,17,17,.7)}
+.xhs-grid{flex:1;display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:4px 12px 12px;align-content:start;overflow:hidden}
+.xcard{border-radius:12px;overflow:hidden;background:#f4f0f4}
+.xcover{height:118px;position:relative}
+.xcover.play::after{content:"";position:absolute;left:8px;bottom:8px;width:22px;height:22px;border-radius:50%;background:rgba(0,0,0,.55) url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>') center/12px no-repeat}
+.xt{font-size:12px;line-height:1.45;padding:8px 10px 6px;color:#333}
+.xm{display:flex;align-items:center;gap:6px;padding:0 10px 10px;font-size:10px;color:rgba(17,17,17,.45)}
+.xm .av{width:14px;height:14px;border-radius:50%}
+.g1{background:linear-gradient(135deg,#e8dff5,#c9a8e8)}.g2{background:linear-gradient(135deg,#d8efe9,#7fc4b2)}
+.g3{background:linear-gradient(135deg,#fbe8d8,#eab98a)}.g4{background:linear-gradient(135deg,#dbe6fb,#92b1ea)}
+.g5{background:linear-gradient(135deg,#fbdae4,#ea92ae)}.g6{background:linear-gradient(135deg,#e6efd8,#a8c77f)}
+.xhs-nav{display:flex;justify-content:space-around;align-items:center;padding:12px 0 26px;border-top:1px solid rgba(17,17,17,.07);font-size:10px;color:rgba(17,17,17,.5)}
+.xhs-nav .nav-i{display:flex;flex-direction:column;align-items:center;gap:3px}
+.xhs-nav .fab{width:40px;height:28px;border-radius:10px;background:linear-gradient(135deg,#ff2e4d,#ff2442);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:16px;margin-top:-14px;border:2.5px solid #fffbff}
+.dim{position:absolute;inset:0;background:rgba(60,50,70,.35)}
+
+/* ============ 图标 ============ */
+.i{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:0 0 auto}
+
+/* ============ 方向B核心：贴边滑块（M3 形状变换） ============ */
+.tab{position:absolute;left:6px;top:62%;transform:translateY(-50%);width:34px;height:108px;border-radius:99px;
+  background:#b02e38;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
+  box-shadow:0 4px 14px rgba(176,46,56,.4)}
+.tab .hnd{width:18px;height:3px;border-radius:99px;background:rgba(255,255,255,.9)}
+.tab .hnd:last-child{width:11px}
+.tab .logo-dot{width:14px;height:14px;border-radius:8px 8px 8px 2px;background:#ffdada}
+.tab.pressed{height:128px;width:38px;border-radius:22px;background:#8f1d29;box-shadow:0 10px 26px rgba(143,29,41,.5)}
+
+/* 拖拽态 */
+.edge-track{position:absolute;border:2px dashed rgba(176,46,56,.35);border-radius:18px;pointer-events:none}
+.edge-track.v{top:90px;bottom:150px;width:30px}.edge-track.h{left:64px;right:64px;height:30px}
+.edge-track.hot{border-color:#b02e38;background:rgba(176,46,56,.09)}
+.magnet-tip{position:absolute;left:auto;right:58px;top:63%;transform:translateY(-50%);background:#31000d;color:#fff;
+  font-size:11px;padding:8px 13px;border-radius:14px 14px 2px 14px;display:flex;align-items:center;gap:6px;box-shadow:0 8px 22px rgba(49,0,13,.35)}
+.touch-dot{position:absolute;width:46px;height:46px;border-radius:50%;background:radial-gradient(circle,rgba(176,46,56,.25),rgba(176,46,56,0) 70%)}
+
+/* ============ 功能面板（M3 表面） ============ */
+.panel{position:absolute;top:0;bottom:0;left:0;width:86%;background:#fffbff;border-right:1px solid #f3edf7;
+  border-radius:0 36px 36px 0;box-shadow:-2px 0 0 #f7f2fa inset,24px 0 60px rgba(88,60,90,.18);
+  padding:22px 18px 20px;display:flex;flex-direction:column;gap:14px;overflow:hidden}
+.p-head{display:flex;align-items:center;gap:10px}
+.p-grip{display:flex;flex-direction:column;gap:2.5px}
+.p-grip i{width:14px;height:2.5px;border-radius:2px;background:rgba(28,27,31,.3)}
+.p-title{font-size:16px;font-weight:800;letter-spacing:.01em;color:#1c1b1f}
+.p-chip{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:10.5px;font-weight:600;color:#146c2e;background:#d9f2e2;
+  padding:5px 10px;border-radius:10px;white-space:nowrap}
+.p-chip .st{width:5px;height:5px;border-radius:50%;background:#1d8a3c}
+.p-close{color:rgba(28,27,31,.55);display:flex;background:#f3edf7;border-radius:99px;padding:5px}
+.detect{display:flex;align-items:center;gap:8px;font-size:11.5px;color:#49454f;background:#f3edf7;border-radius:14px;padding:9px 12px}
+.detect .xhs-logo{width:20px;height:20px;border-radius:7px;background:linear-gradient(135deg,#ff2e4d,#ff2442);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff}
+.detect b{color:#1c1b1f;font-weight:700}
+.detect .url{margin-left:auto;color:rgba(73,69,79,.6);font-size:10px}
+.card{background:#fff;border:1px solid #f3edf7;border-radius:22px;overflow:hidden;box-shadow:0 2px 10px rgba(88,60,90,.08)}
+.cover{height:148px;position:relative}
+.cover .play{position:absolute;left:10px;bottom:10px;width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.9);display:flex;align-items:center;justify-content:center;color:#b02e38}
+.cover .dur{position:absolute;right:10px;bottom:10px;font-size:10px;background:rgba(28,27,31,.65);padding:3px 8px;border-radius:999px;color:#fff}
+.cover .imgs{position:absolute;left:10px;top:10px;font-size:10px;background:rgba(255,255,255,.85);padding:3px 8px;border-radius:999px;color:#49454f}
+.card-body{padding:12px 13px 13px;display:flex;flex-direction:column;gap:10px}
+.card-title{font-size:15px;font-weight:800;line-height:1.4;color:#1c1b1f}
+.author{display:flex;align-items:center;gap:8px}
+.author .av{width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,#ffc7cf,#e88aa0)}
+.author .nm{font-size:12px;color:#49454f;font-weight:600}
+.follow{margin-left:auto;font-size:10.5px;font-weight:700;color:#b02e38;background:#ffecee;border-radius:12px;padding:4px 13px}
+.stats{display:flex;gap:16px;font-size:11.5px;color:#57505c;font-weight:600}
+.stats span{display:flex;align-items:center;gap:5px}
+.sect-label{font-size:11px;font-weight:700;letter-spacing:.14em;color:#8b8394;margin-top:2px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;color:#8f1d29;background:#ffe4e6;border:1px solid #ffc9ce;border-radius:12px;padding:7px 12px}
+.chip.off{color:#57505c;background:#f3edf7;border-color:#f3edf7}
+.thought{background:#fff;border:1.5px dashed #e3dbe7;border-radius:20px;padding:12px 13px;display:flex;flex-direction:column;gap:10px}
+.thought .ph{font-size:12.5px;color:#8b8394}
+.thought-row{display:flex;align-items:center;gap:8px}
+.mic-btn{margin-left:auto;width:36px;height:36px;border-radius:14px 14px 14px 4px;background:#b02e38;display:flex;align-items:center;justify-content:center;color:#fff;box-shadow:0 5px 14px rgba(176,46,56,.35)}
+.tag-sug{display:flex;gap:7px;flex-wrap:wrap}
+.tag{font-size:10.5px;font-weight:600;color:#6750a4;background:#f2ecfa;border-radius:10px;padding:5px 11px}
+.cta{margin-top:auto;height:52px;border-radius:99px;background:#31000d;display:flex;align-items:center;justify-content:center;
+  font-size:14.5px;font-weight:700;color:#ffdada;letter-spacing:.03em;box-shadow:0 8px 22px rgba(49,0,13,.28)}
+.cta.done{background:#d9f2e2;color:#146c2e;box-shadow:none}
+.dest{font-size:10.5px;color:#8b8394;text-align:center}
+.dest code{color:#8f1d29;background:#ffecee;padding:2px 8px;border-radius:7px;font-weight:600}
+
+/* 语音态 */
+.rec-card{background:#ffe4e6;border:1.5px solid #ffc9ce;border-radius:24px;padding:16px 14px;display:flex;flex-direction:column;gap:12px}
+.wave{display:flex;align-items:center;gap:3px;height:38px}
+.wave i{flex:1;background:#b02e38;border-radius:99px;animation:wv 1s ease-in-out infinite}
+@keyframes wv{0%,100%{height:22%}50%{height:96%}}
+.rec-meta{display:flex;align-items:center;justify-content:space-between;font-size:11px;font-weight:600;color:#8f1d29}
+.rec-meta .rec{display:flex;align-items:center;gap:6px}
+.rec-meta .rec i{width:8px;height:8px;border-radius:50%;background:#b02e38;animation:blink 1s steps(2) infinite}
+@keyframes blink{50%{opacity:.15}}
+.transcript{font-size:12px;line-height:1.7;color:#6d6478;font-style:italic;border-top:1px dashed #f0bfc4;padding-top:10px}
+.transcript b{color:#8f1d29;font-style:normal;font-weight:700}
+
+/* 进度 */
+.prog{display:flex;flex-direction:column;gap:12px}
+.prow{display:flex;align-items:center;gap:11px;font-size:12.5px;font-weight:600;color:#37323e}
+.prow .ic{width:34px;height:34px;border-radius:13px;background:#f3edf7;display:flex;align-items:center;justify-content:center;color:#6750a4}
+.prow .ok{color:#146c2e}
+.bar{flex:1;height:6px;border-radius:99px;background:#eee7ef;overflow:hidden;min-width:64px}
+.bar i{display:block;height:100%;border-radius:99px;background:#b02e38;position:relative}
+.bar.run i::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.6),transparent);animation:shm 1.2s linear infinite}
+@keyframes shm{from{transform:translateX(-100%)}to{transform:translateX(100%)}}
+.prow .val{font-size:11px;color:#8b8394;min-width:58px;text-align:right}
+.done-block{background:#d9f2e2;border-radius:20px;padding:14px;display:flex;flex-direction:column;gap:9px}
+.done-top{display:flex;align-items:center;gap:9px;font-size:13.5px;font-weight:800;color:#146c2e}
+.path-chip{font-size:10.5px;color:#37323e;background:#fff;border-radius:12px;padding:7px 10px;line-height:1.5}
+.recent{display:flex;flex-direction:column;gap:8px}
+.rrow{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid #f3edf7;border-radius:16px;padding:8px 10px}
+.rrow .th{width:34px;height:34px;border-radius:11px}
+.rrow .ti{font-size:12px;color:#37323e;line-height:1.35;font-weight:600}
+.rrow .tm{margin-left:auto;font-size:10px;color:#8b8394}
+.divider-cap{display:flex;align-items:center;gap:10px;font-size:10.5px;font-weight:700;color:#8b8394;letter-spacing:.2em}
+.divider-cap::before,.divider-cap::after{content:"";flex:1;height:1px;background:#eee7ef}
+
+/* 设置抽屉 */
+.sheet{position:absolute;left:0;right:0;bottom:0;height:82%;border-radius:32px 32px 0 0;background:#fffbff;
+  padding:18px 20px 24px;display:flex;flex-direction:column;gap:15px;box-shadow:0 -14px 44px rgba(88,60,90,.22)}
+.sheet-grab{width:38px;height:4.5px;border-radius:99px;background:rgba(28,27,31,.22);margin:0 auto}
+.sheet-head{display:flex;align-items:center;justify-content:space-between}
+.sheet-head b{font-size:16.5px;font-weight:800}
+.sheet-head .fin{font-size:13px;color:#b02e38;font-weight:700}
+.f-label{font-size:11px;font-weight:700;letter-spacing:.14em;color:#8b8394}
+.pos-widget{display:flex;gap:14px;align-items:center}
+.phone-outline{width:74px;height:128px;border:2px solid #cabfce;border-radius:16px;position:relative;flex:0 0 auto}
+.poz{position:absolute;display:flex;align-items:center;justify-content:center;border-radius:8px;color:rgba(28,27,31,.4);font-size:9px}
+.poz.l{left:-8px;top:34%;bottom:34%;width:16px}.poz.r{right:-8px;top:34%;bottom:34%;width:16px}
+.poz.t{top:-8px;left:30%;right:30%;height:16px}.poz.b{bottom:-8px;left:30%;right:30%;height:16px}
+.poz.on{background:#b02e38;border-radius:99px;color:transparent;box-shadow:0 0 0 4px #ffe4e6}
+.pos-desc{font-size:11.5px;color:#57505c;line-height:1.7}
+.pos-desc b{color:#8f1d29}
+.srow{display:flex;align-items:center;gap:12px;font-size:12.5px;font-weight:600;color:#37323e}
+.slider{flex:1;height:6px;border-radius:99px;background:#eee7ef;position:relative}
+.slider i{position:absolute;left:0;top:0;bottom:0;border-radius:99px;background:#b02e38}
+.slider u{position:absolute;top:50%;width:18px;height:18px;border-radius:50%;background:#b02e38;border:3px solid #fff;transform:translateY(-50%);box-shadow:0 2px 8px rgba(49,0,13,.35)}
+.sval{font-size:11px;color:#8b8394;min-width:34px;text-align:right}
+.trow{display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:600;color:#37323e;padding:4px 0}
+.trow small{display:block;font-size:10.5px;color:#8b8394;font-weight:400;margin-top:3px}
+.switch{width:44px;height:26px;border-radius:99px;background:#b02e38;position:relative;flex:0 0 auto}
+.switch::after{content:"";position:absolute;right:3px;top:3px;width:20px;height:20px;border-radius:50%;background:#fff}
+.pair-card{background:#f3edf7;border-radius:20px;padding:13px 14px;display:flex;align-items:center;gap:11px}
+.pair-card .pc-ic{width:38px;height:38px;border-radius:14px;background:#e2dcfb;display:flex;align-items:center;justify-content:center;color:#4a3fa8}
+.pair-card .pc-nm{font-size:13px;font-weight:700;color:#1c1b1f}
+.pair-card .pc-st{font-size:10.5px;color:#146c2e;display:flex;align-items:center;gap:5px;margin-top:3px}
+.pair-card .pc-st i{width:5px;height:5px;border-radius:50%;background:#1d8a3c}
+.repair{margin-left:auto;font-size:11px;font-weight:700;color:#6750a4;background:#fff;border-radius:99px;padding:7px 14px}
+.pair-hint{font-size:10.5px;color:#8b8394;line-height:1.7}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}}
+</style>
+</head>
+<body>
+
+<header class="dir-head">
+  <span class="dir-tag">DIRECTION B</span>
+  <h1>原生 Material You</h1>
+  <p>浅色 M3 表达性设计：从小红书红提取的动态色板、大圆角表面、加粗数字层级。
+    定位是「系统的一部分」——像 Google 为你定制的官方伴侣，克制、可信、无侵入感，深浅色跟随系统。</p>
+  <div class="swatches">
+    <div class="sw" style="background:#b02e38"><span>primary</span></div>
+    <div class="sw" style="background:#ffe4e6"><span>容器色</span></div>
+    <div class="sw" style="background:#31000d"><span>on-primary 按钮</span></div>
+    <div class="sw" style="background:#6750a4"><span>辅助紫</span></div>
+  </div>
+</header>
+
+<div class="frames">
+
+<!-- ═══════════ 场景1 待机 ═══════════ -->
+<figure class="frame">
+  <div class="phone"><div class="screen">
+    <div class="xhs">
+      <div class="xhs-top"><span>关注</span><b>发现</b><span>附近</span><svg class="i x-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></div>
+      <div class="xhs-grid">
+        <div class="xcard"><div class="xcover g1"></div><div class="xt">独居一年，我把出租屋改成了样子</div><div class="xm"><i class="av g5"></i>阿绵 · 赞 3.2万</div></div>
+        <div class="xcard"><div class="xcover play g2"></div><div class="xt">一个人自律的100天，我悟了</div><div class="xm"><i class="av g4"></i>山野拾光 · 赞 1.2万</div></div>
+        <div class="xcard"><div class="xcover g3"></div><div class="xt">手冲入门｜三支豆子横评</div><div class="xm"><i class="av g6"></i>豆贩子 · 赞 8941</div></div>
+        <div class="xcard"><div class="xcover play g4"></div><div class="xt">通勤背包开箱，能装下整个生活</div><div class="xm"><i class="av g1"></i>Kiko · 赞 6720</div></div>
+      </div>
+      <div class="xhs-nav"><span class="nav-i">首页</span><span class="nav-i">市集</span><span class="fab">+</span><span class="nav-i">消息</span><span class="nav-i">我</span></div>
+    </div>
+    <div class="tab"><span class="logo-dot"></span><span class="hnd"></span><span class="hnd"></span></div>
+  </div></div>
+  <figcaption>01 · 待机<em>M3 药丸手柄，主色填充 + 投影</em></figcaption>
+</figure>
+
+<!-- ═══════════ 场景2 拖拽吸附 ═══════════ -->
+<figure class="frame">
+  <div class="phone"><div class="screen">
+    <div class="xhs">
+      <div class="xhs-top"><span>关注</span><b>发现</b><span>附近</span><svg class="i x-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></div>
+      <div class="xhs-grid">
+        <div class="xcard"><div class="xcover g1"></div><div class="xt">独居一年，我把出租屋改成了样子</div><div class="xm"><i class="av g5"></i>阿绵 · 赞 3.2万</div></div>
+        <div class="xcard"><div class="xcover play g2"></div><div class="xt">一个人自律的100天，我悟了</div><div class="xm"><i class="av g4"></i>山野拾光 · 赞 1.2万</div></div>
+        <div class="xcard"><div class="xcover g3"></div><div class="xt">手冲入门｜三支豆子横评</div><div class="xm"><i class="av g6"></i>豆贩子 · 赞 8941</div></div>
+        <div class="xcard"><div class="xcover play g4"></div><div class="xt">通勤背包开箱，能装下整个生活</div><div class="xm"><i class="av g1"></i>Kiko · 赞 6720</div></div>
+      </div>
+      <div class="xhs-nav"><span class="nav-i">首页</span><span class="nav-i">市集</span><span class="fab">+</span><span class="nav-i">消息</span><span class="nav-i">我</span></div>
+    </div>
+    <div class="dim"></div>
+    <div class="edge-track v" style="right:8px"></div>
+    <div class="edge-track v" style="left:8px"></div>
+    <div class="edge-track h" style="top:66px"></div>
+    <div class="edge-track h hot" style="bottom:106px"></div>
+    <div class="tab pressed" style="left:auto;right:11px;top:70%"><span class="logo-dot"></span><span class="hnd"></span><span class="hnd"></span></div>
+    <div class="touch-dot" style="right:-4px;top:69%"></div>
+    <div class="magnet-tip"><svg class="i" viewBox="0 0 24 24" style="width:12px;height:12px"><path d="M12 19V5M5 12l7-7 7 7"/></svg>松手吸附到右缘</div>
+  </div></div>
+  <figcaption>02 · 长按拖动<em>形状随按压变形，吸附轨道高亮</em></figcaption>
+</figure>
+
+<!-- ═══════════ 场景3 识别帖子 ═══════════ -->
+<figure class="frame">
+  <div class="phone"><div class="screen">
+    <div class="xhs">
+      <div class="xhs-top"><span>关注</span><b>发现</b><span>附近</span></div>
+      <div class="xhs-grid">
+        <div class="xcard"><div class="xcover g5"></div><div class="xt">秋冬第一件针织衫这样选</div><div class="xm"><i class="av g3"></i>软软 · 赞 2100</div></div>
+        <div class="xcard"><div class="xcover g6"></div><div class="xt">阳台种菜两个月实录</div><div class="xm"><i class="av g2"></i>绿手指 · 赞 5560</div></div>
+      </div>
+      <div class="xhs-nav"><span class="nav-i">首页</span><span class="nav-i">市集</span><span class="fab">+</span><span class="nav-i">消息</span><span class="nav-i">我</span></div>
+    </div>
+    <div class="dim" style="background:rgba(60,50,70,.18)"></div>
+    <div class="panel">
+      <div class="p-head">
+        <span class="p-grip"><i></i><i></i><i></i></span>
+        <span class="p-title">Memmos 捕捉</span>
+        <span class="p-chip"><span class="st"></span>已配对 · 局域网</span>
+        <span class="p-close"><svg class="i" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></span>
+      </div>
+      <div class="detect"><span class="xhs-logo">书</span><span>已识别当前帖子</span><span class="url">xhslink.com/Ab3fKz</span></div>
+      <div class="card">
+        <div class="cover g2"><span class="imgs">图片 9 张</span><span class="play"><svg class="i" viewBox="0 0 24 24" style="fill:#b02e38;stroke:none"><path d="M8 5v14l11-7z"/></svg></span><span class="dur">02:47</span></div>
+        <div class="card-body">
+          <div class="card-title">一个人自律的100天，我悟了</div>
+          <div class="author"><span class="av"></span><span class="nm">山野拾光</span><span class="follow">关注</span></div>
+          <div class="stats">
+            <span><svg class="i" viewBox="0 0 24 24" style="width:13px;height:13px"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.51 4.04 3 5.5l7 7Z"/></svg>1.2万</span>
+            <span><svg class="i" viewBox="0 0 24 24" style="width:13px;height:13px"><path d="M6 3h12v18l-6-4-6 4Z"/></svg>8432</span>
+            <span><svg class="i" viewBox="0 0 24 24" style="width:13px;height:13px"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>356</span>
+          </div>
+        </div>
+      </div>
+      <div class="sect-label">抓取内容</div>
+      <div class="chips">
+        <span class="chip"><svg class="i" viewBox="0 0 24 24" style="width:11px;height:11px"><path d="M20 6 9 17l-5-5"/></svg>原文</span>
+        <span class="chip"><svg class="i" viewBox="0 0 24 24" style="width:11px;height:11px"><path d="M20 6 9 17l-5-5"/></svg>评论 356</span>
+        <span class="chip"><svg class="i" viewBox="0 0 24 24" style="width:11px;height:11px"><path d="M20 6 9 17l-5-5"/></svg>视频</span>
+        <span class="chip off">封面图</span>
+      </div>
+      <div class="sect-label">我的感想</div>
+      <div class="thought">
+        <span class="ph">写下此刻的想法…</span>
+        <div class="thought-row">
+          <span class="tag">#自律</span><span class="tag">#成长记录</span><span class="tag">＋自定义</span>
+          <span class="mic-btn"><svg class="i" viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><path d="M12 18v4"/></svg></span>
+        </div>
+      </div>
+      <div class="cta">整理并同步到 Obsidian</div>
+      <div class="dest">存入 <code>Memmos graph/小红书/</code></div>
+    </div>
+  </div></div>
+  <figcaption>03 · 识别帖子<em>白色表面卡 + 容器色 chip</em></figcaption>
+</figure>
+
+<!-- ═══════════ 场景4 语音感想 ═══════════ -->
+<figure class="frame">
+  <div class="phone"><div class="screen">
+    <div class="xhs">
+      <div class="xhs-top"><span>关注</span><b>发现</b><span>附近</span></div>
+      <div class="xhs-grid">
+        <div class="xcard"><div class="xcover g4"></div><div class="xt">周末去哪儿｜小众展览清单</div><div class="xm"><i class="av g5"></i>Momo · 赞 980</div></div>
+        <div class="xcard"><div class="xcover g1"></div><div class="xt">极简衣柜断舍离心得</div><div class="xm"><i class="av g6"></i>一一 · 赞 4300</div></div>
+      </div>
+      <div class="xhs-nav"><span class="nav-i">首页</span><span class="nav-i">市集</span><span class="fab">+</span><span class="nav-i">消息</span><span class="nav-i">我</span></div>
+    </div>
+    <div class="dim" style="background:rgba(60,50,70,.18)"></div>
+    <div class="panel">
+      <div class="p-head">
+        <span class="p-grip"><i></i><i></i><i></i></span>
+        <span class="p-title">Memmos 捕捉</span>
+        <span class="p-chip"><span class="st"></span>已配对 · 局域网</span>
+        <span class="p-close"><svg class="i" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></span>
+      </div>
+      <div class="detect"><span class="xhs-logo">书</span><span>正在为这条帖子记录感想</span></div>
+      <div class="sect-label">我的感想</div>
+      <div class="rec-card">
+        <div class="rec-meta"><span class="rec"><i></i>REC 00:07</span><span>松手发送</span></div>
+        <div class="wave"><i style="animation-delay:0s"></i><i style="animation-delay:.1s"></i><i style="animation-delay:.25s"></i><i style="animation-delay:.05s"></i><i style="animation-delay:.35s"></i><i style="animation-delay:.15s"></i><i style="animation-delay:.4s"></i><i style="animation-delay:.2s"></i><i style="animation-delay:.3s"></i><i style="animation-delay:.45s"></i><i style="animation-delay:.08s"></i><i style="animation-delay:.28s"></i><i style="animation-delay:.38s"></i><i style="animation-delay:.12s"></i><i style="animation-delay:.42s"></i></div>
+        <div class="transcript">实时转写：<b>今天看到这篇突然想起我坚持晨跑的那段日子…</b></div>
+      </div>
+      <div class="tag-sug"><span class="tag">#自律</span><span class="tag">#成长记录</span><span class="tag">＋自定义</span></div>
+      <div class="srow" style="justify-content:space-between;font-size:11px;color:#8b8394">
+        <span>↑ 上滑取消</span><span>松手自动转文字并保留语音</span>
+      </div>
+      <div class="cta">整理并同步到 Obsidian</div>
+      <div class="dest">存入 <code>Memmos graph/小红书/</code></div>
+    </div>
+  </div></div>
+  <figcaption>04 · 语音感想<em>录音卡片用错误色容器承载紧张感</em></figcaption>
+</figure>
+
+<!-- ═══════════ 场景5 进度→完成 ═══════════ -->
+<figure class="frame">
+  <div class="phone"><div class="screen">
+    <div class="xhs">
+      <div class="xhs-top"><span>关注</span><b>发现</b><span>附近</span></div>
+      <div class="xhs-grid">
+        <div class="xcard"><div class="xcover g3"></div><div class="xt">咖啡师不会告诉你的点单技巧</div><div class="xm"><i class="av g2"></i>拿铁因 · 赞 7800</div></div>
+        <div class="xcard"><div class="xcover g6"></div><div class="xt">citywalk 路线分享｜老城区</div><div class="xm"><i class="av g1"></i>走走 · 赞 3400</div></div>
+      </div>
+      <div class="xhs-nav"><span class="nav-i">首页</span><span class="nav-i">市集</span><span class="fab">+</span><span class="nav-i">消息</span><span class="nav-i">我</span></div>
+    </div>
+    <div class="dim" style="background:rgba(60,50,70,.18)"></div>
+    <div class="panel">
+      <div class="p-head">
+        <span class="p-grip"><i></i><i></i><i></i></span>
+        <span class="p-title">抓取进度</span>
+        <span class="p-chip"><span class="st"></span>已配对 · 局域网</span>
+        <span class="p-close"><svg class="i" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></span>
+      </div>
+      <div class="prog">
+        <div class="prow"><span class="ic"><svg class="i" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h6"/></svg></span>原文提取<span class="bar"><i style="width:100%"></i></span><span class="val ok">✓ 完成</span></div>
+        <div class="prow"><span class="ic"><svg class="i" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/></svg></span>图片保存<span class="bar"><i style="width:100%"></i></span><span class="val ok">9 / 9</span></div>
+        <div class="prow"><span class="ic"><svg class="i" viewBox="0 0 24 24"><path d="m5 3 14 9-14 9V3z"/></svg></span>视频下载<span class="bar run"><i style="width:78%"></i></span><span class="val">78%</span></div>
+        <div class="prow"><span class="ic"><svg class="i" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>评论抓取<span class="bar run"><i style="width:60%"></i></span><span class="val">214 / 356</span></div>
+      </div>
+      <div class="divider-cap">完 成 后</div>
+      <div class="done-block">
+        <div class="done-top"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m8.5 12.5 2.5 2.5 5-5.5"/></svg>已保存到 Obsidian</div>
+        <div class="path-chip">Memmos graph/小红书/<br>一个人自律的100天.md</div>
+      </div>
+      <div class="sect-label">最近剪藏</div>
+      <div class="recent">
+        <div class="rrow"><span class="th g5"></span><span class="ti">秋冬第一件针织衫这样选</span><span class="tm">刚刚</span></div>
+        <div class="rrow"><span class="th g2"></span><span class="ti">手冲入门｜三支豆子横评</span><span class="tm">昨天</span></div>
+      </div>
+    </div>
+  </div></div>
+  <figcaption>05 · 抓取进度 → 完成<em>进度条 + 成功容器色块</em></figcaption>
+</figure>
+
+<!-- ═══════════ 场景6 设置抽屉 ═══════════ -->
+<figure class="frame">
+  <div class="phone"><div class="screen">
+    <div class="xhs">
+      <div class="xhs-top"><span>关注</span><b>发现</b><span>附近</span></div>
+      <div class="xhs-grid">
+        <div class="xcard"><div class="xcover g2"></div><div class="xt">冬日暖桌布置灵感合集</div><div class="xm"><i class="av g3"></i>暖暖 · 赞 1.8万</div></div>
+        <div class="xcard"><div class="xcover g4"></div><div class="xt">效率工具组合拳分享</div><div class="xm"><i class="av g5"></i>白噪音 · 赞 2200</div></div>
+      </div>
+      <div class="xhs-nav"><span class="nav-i">首页</span><span class="nav-i">市集</span><span class="fab">+</span><span class="nav-i">消息</span><span class="nav-i">我</span></div>
+    </div>
+    <div class="dim" style="background:rgba(60,50,70,.4)"></div>
+    <div class="sheet">
+      <span class="sheet-grab"></span>
+      <div class="sheet-head"><b>浮条设置</b><span class="fin">完成</span></div>
+      <div class="f-label">贴边位置（长按滑块拖动也可换边）</div>
+      <div class="pos-widget">
+        <div class="phone-outline">
+          <span class="poz l on"></span><span class="poz r"></span><span class="poz t"></span><span class="poz b"></span>
+        </div>
+        <div class="pos-desc">当前：<b>左缘</b> · 高度 62%<br>吸附后轻微震动确认，双击可临时隐藏 5 秒。</div>
+      </div>
+      <div class="srow">贴边高度<span class="slider"><i style="width:62%"></i><u style="left:calc(62% - 9px)"></u></span><span class="sval">62%</span></div>
+      <div class="srow">大小<span class="slider"><i style="width:45%"></i><u style="left:calc(45% - 9px)"></u></span><span class="sval">中</span></div>
+      <div class="srow">不透明度<span class="slider"><i style="width:75%"></i><u style="left:calc(75% - 9px)"></u></span><span class="sval">75%</span></div>
+      <div class="trow"><span>自动隐藏<small>无操作 10 秒后缩为细条</small></span><span class="switch"></span></div>
+      <div class="trow"><span>仅在小红书内显示<small>关闭后所有 App 内可见</small></span><span class="switch"></span></div>
+      <div class="f-label">设备配对</div>
+      <div class="pair-card">
+        <span class="pc-ic"><svg class="i" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg></span>
+        <span><span class="pc-nm">Tylor 的 MacBook Pro</span><span class="pc-st"><i></i>已连接 · 192.168.1.23</span></span>
+        <span class="repair">重新配对</span>
+      </div>
+      <div class="pair-hint">配对一次即可：同一 Wi-Fi 下两台设备互相发现并自动传输剪藏，全程不经任何服务器。</div>
+    </div>
+  </div></div>
+  <figcaption>06 · 浮条设置<em>标准 M3 底部抽屉与开关</em></figcaption>
+</figure>
+
+</div>
+</body>
+</html>

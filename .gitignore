@@ -1,0 +1,12 @@
+*.iml
+.gradle/
+local.properties
+.idea/
+.DS_Store
+build/
+app/build/
+captures/
+.externalNativeBuild/
+cxx/
+# 临时验证截图；定稿截图归档在 docs/ui-design/app-screens/
+shots/

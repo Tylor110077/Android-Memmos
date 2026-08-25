@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  局域网配对同步（Obsidian SyncServer）走 HTTP 明文。
+  小红书抓取本身全部 https，不受此配置降级影响；
+  放开明文仅为允许连到家里/办公室的配对电脑。
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>

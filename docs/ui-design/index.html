@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Memmos 安卓配套 · 设计方向画廊</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0b10;color:#eef1f7;font-family:"PingFang SC","HarmonyOS Sans SC","Microsoft YaHei",sans-serif;padding:56px 48px 90px;max-width:1280px;margin:0 auto}
+header h1{font-size:34px;font-weight:700;line-height:1.2}
+header .sub{margin-top:12px;color:rgba(238,241,247,.55);font-size:14.5px;line-height:1.9;max-width:760px}
+header .meta{display:inline-block;margin-top:16px;font-size:11px;letter-spacing:.18em;color:rgba(238,241,247,.4);border:1px solid rgba(238,241,247,.16);border-radius:999px;padding:5px 14px}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:26px;margin-top:44px}
+.card{border:1px solid rgba(255,255,255,.1);border-radius:20px;overflow:hidden;background:#101218;display:flex;flex-direction:column;text-decoration:none;color:inherit;transition:transform .25s ease,border-color .25s ease}
+.card:hover{transform:translateY(-4px);border-color:rgba(255,255,255,.28)}
+.thumb{position:relative;border-bottom:1px solid rgba(255,255,255,.08)}
+.thumb img{display:block;width:100%;height:300px;object-fit:cover;object-position:left top}
+.badge{position:absolute;left:14px;top:14px;font-size:11px;letter-spacing:.2em;padding:5px 12px;border-radius:999px;backdrop-filter:blur(8px);font-weight:700}
+.c-body{padding:20px 20px 22px;display:flex;flex-direction:column;gap:10px;flex:1}
+.c-body h2{font-size:19px}
+.c-body p{font-size:13px;line-height:1.8;color:rgba(238,241,247,.6);flex:1}
+.c-link{font-size:12.5px;font-weight:600;margin-top:4px}
+footer{margin-top:40px;font-size:12px;color:rgba(238,241,247,.35);line-height:1.9}
+@media (prefers-reduced-motion:reduce){.card:hover{transform:none}}
+</style>
+</head>
+<body>
+
+<header>
+  <span class="meta">PHASE 1 · UI ONLY · 模拟数据原型 ×18 帧</span>
+  <h1>Memmos 安卓配套软件 — 设计方向画廊</h1>
+  <p class="sub">贴边捕捉滑块 + 小红书剪藏功能面板。三个方向共享同一套信息架构（待机 / 拖拽吸附 / 识别帖子 /
+    语音感想 / 抓取进度→完成 / 浮条设置），仅视觉语言不同。点击卡片打开对应方向的完整 HTML 原型（横向滚动浏览全部六帧）。</p>
+</header>
+
+<div class="grid">
+  <a class="card" href="direction-a-glass.html">
+    <div class="thumb"><img src="screenshots/direction-a-glass.png" alt="方向 A 琉璃 Glass"><span class="badge" style="background:rgba(255,46,77,.2);color:#ff8b98">DIRECTION A</span></div>
+    <div class="c-body">
+      <h2>琉璃 Glass</h2>
+      <p>深色玻璃拟态 + 小红书红橙渐变。待机时呼吸微光、低存在感；面板像浮起的磨砂玻璃，覆盖任何宿主 App 都不打架。消费级质感，最「潮」。</p>
+      <span class="c-link" style="color:#ff8b98">打开完整原型 →</span>
+    </div>
+  </a>
+  <a class="card" href="direction-b-material.html">
+    <div class="thumb"><img src="screenshots/direction-b-material.png" alt="方向 B 原生 Material You"><span class="badge" style="background:rgba(103,80,164,.22);color:#c9b8f5">DIRECTION B</span></div>
+    <div class="c-body">
+      <h2>原生 Material You</h2>
+      <p>浅色 M3 表达性设计：从小红书红提取的动态色板、大圆角、加粗数字。像系统自带的官方伴侣，克制可信，深浅色跟随壁纸主题。最「稳」。</p>
+      <span class="c-link" style="color:#c9b8f5">打开完整原型 →</span>
+    </div>
+  </a>
+  <a class="card" href="direction-c-ink.html">
+    <div class="thumb"><img src="screenshots/direction-c-ink.png" alt="方向 C 墨石 Ink"><span class="badge" style="background:rgba(139,124,246,.18);color:#cdb9ff">DIRECTION C</span></div>
+    <div class="c-body">
+      <h2>墨石 Ink</h2>
+      <p>暖黑纸墨底 + 发丝描边 + 宋体标题，Obsidian 紫作唯一墨彩。与桌面端 Memmos Graph 的知识气质同源——安静、克制、耐看。最「书房」。</p>
+      <span class="c-link" style="color:#cdb9ff">打开完整原型 →</span>
+    </div>
+  </a>
+</div>
+
+<footer>交互约定与竞品调研结论见 README.md · 截图由 headless Chrome 渲染生成于 docs/ui-design/screenshots/</footer>
+
+</body>
+</html>
