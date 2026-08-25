@@ -303,7 +303,16 @@ class XhsCaptureService : Service() {
                 videoUrl = httpNote?.videoUrl ?: domNote.videoUrl,
                 type = if ((httpNote?.videoUrl ?: domNote.videoUrl) != null) "video" else domNote.type,
             )
-            handler.post { finish(merged) }
+            // 顺序锚定：httpNote.imageUrls 来自 imageList（顺序=原帖）；最终列表按它重排——
+            // 在 anchor 内的按 anchor 顺序，其余（DOM 多出的）按原相对序追加到尾部。
+            // 保证保存顺序=imageList 顺序，任何兜底路径都绕不开。
+            val anchor = httpNote?.imageUrls.orEmpty()
+            val ordered = remember(merged.imageUrls) {
+                if (anchor.isEmpty()) merged.imageUrls
+                else (anchor.filter { a -> merged.imageUrls.any { it == a } } +
+                    merged.imageUrls.filter { it !in anchor }).distinct()
+            }
+            handler.post { finish(merged.copy(imageUrls = ordered)) }
         }
     }
 
