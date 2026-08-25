@@ -29,7 +29,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
@@ -37,7 +36,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.tylor.memmos.ui.components.AmbientBackdrop
 import com.tylor.memmos.ui.theme.AccentBrush
 import com.tylor.memmos.ui.theme.IslandFill
 import com.tylor.memmos.ui.theme.TextFaint
@@ -62,28 +60,19 @@ fun SettingsSheet(
     onWidthChange: (Float) -> Unit,
     onLengthChange: (Float) -> Unit,
     onDismiss: () -> Unit,
+    /** 点抽屉空白区域：整个退出悬浮窗（关抽屉+面板，浮条贴边保留，再滑开是初始面板） */
+    onDismissAll: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Box(
         modifier
             .fillMaxWidth()
-            .fillMaxHeight(0.84f),
+            .fillMaxHeight(0.84f)
+            // 空白区（无控件处理的手势）tap → 整个退出；滑杆/chip/把手各自消费自己的 tap
+            .pointerInput(Unit) { detectTapGestures(onTap = { onDismissAll() }) },
     ) {
-        // 先垫 95% 深底：抽屉叠在面板/宿主之上，全透明会让底层文字叠进来
-        Box(Modifier.fillMaxSize().background(Color(0xF50B0D12)))
-        // 环境光调暗 + 可读性罩（与面板同策略：悬浮层优先文字对比）
-        AmbientBackdrop(Modifier.fillMaxSize(), alpha = 0.32f)
-        Box(
-            Modifier.fillMaxSize().background(
-                Brush.verticalGradient(
-                    listOf(
-                        Color(0x99000000),
-                        Color(0x59000000),
-                        Color(0x99000000),
-                    ),
-                ),
-            ),
-        )
+        // 背景：有一点透明的纯黑（用户要求，去掉环境背景图/罩）
+        Box(Modifier.fillMaxSize().background(Color(0xE6000000)))
         Column(
             Modifier
                 .fillMaxSize()
@@ -140,12 +129,12 @@ fun SettingsSheet(
                 label = "贴边位置",
                 value = frac, valueText = "${(frac * 100).toInt()}%",
             ) { onFracChange(it) }
-            // 宽/长独立（用户要求：浮条同时设定宽度和长度）；范围 8-36dp——可更细、上限不变
+            // 宽/长独立（用户要求：浮条同时设定宽度和长度）；范围 5-36——可更细、上限不变
             SliderRow(
                 label = "宽度",
-                value = (barWidth - 8f) / 28f,
+                value = (barWidth - 5f) / 31f,
                 valueText = "${barWidth.toInt()}dp",
-            ) { onWidthChange(8f + it * 28f) }
+            ) { onWidthChange(5f + it * 31f) }
             SliderRow(
                 label = "长度",
                 value = (barLength - 48f) / 102f,
@@ -177,7 +166,7 @@ private fun PositionWidget(
     barLength: Float,
 ) {
     val lMini = (24f + (barLength - 48f) / 102f * 88f).coerceIn(20f, 112f)
-    val wMini = (3f + (barWidth - 8f) / 28f * 6f).coerceIn(3f, 9f)
+    val wMini = (3f + (barWidth - 5f) / 31f * 6f).coerceIn(3f, 9f)
     Box(
         Modifier
             .size(width = 74.dp, height = 128.dp)

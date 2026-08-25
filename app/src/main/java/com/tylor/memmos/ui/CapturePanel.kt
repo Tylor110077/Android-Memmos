@@ -28,7 +28,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -38,7 +37,6 @@ import androidx.compose.ui.platform.LocalContext
 import coil.compose.AsyncImage
 import com.tylor.memmos.data.ClipStore
 import com.tylor.memmos.sync.SyncPrefs
-import com.tylor.memmos.ui.components.AmbientBackdrop
 import com.tylor.memmos.ui.components.GlassCircleButton
 import com.tylor.memmos.ui.components.VisionRowCard
 import com.tylor.memmos.ui.fetch.XhsCaptureService
@@ -75,22 +73,8 @@ fun CapturePanel(
     val recent = remember(cap.done) { ClipStore(ctx).load().take(3) }
 
     Box(modifier.fillMaxWidth()) {
-        // 先垫 95% 深底：面板是悬浮层、底下是宿主 App，全透明会让宿主文字叠进来
-        Box(Modifier.fillMaxSize().background(Color(0xF50B0D12)))
-        // 环境光调暗 + 可读性罩（上下深、压制亮中带）：悬浮层叠在任意宿主内容上，
-        // 比主界面更强调文字对比（用户反馈：滑开后内容可见性弱）
-        AmbientBackdrop(Modifier.fillMaxSize(), alpha = 0.30f)
-        Box(
-            Modifier.fillMaxSize().background(
-                Brush.verticalGradient(
-                    listOf(
-                        Color(0x99000000), // 上 60% 压暗
-                        Color(0x59000000), // 中带 35%（光斑最亮区域）
-                        Color(0x99000000), // 下 60%
-                    ),
-                ),
-            ),
-        )
+        // 背景：有一点透明的纯黑（用户要求，去掉环境背景图；90% 黑底下宿主隐约可见但不影响阅读）
+        Box(Modifier.fillMaxSize().background(Color(0xE6000000)))
         BoxWithConstraints(
             Modifier.fillMaxWidth()
                 // 上下 34dp：NO_LIMITS 后窗口延伸进状态栏/手势区，补偿避免内容被系统 UI 压住

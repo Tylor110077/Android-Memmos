@@ -21,7 +21,7 @@ class OverlayModel {
 
     fun setEdge(v: TabEdge) { edge.value = v; onChange?.invoke() }
     fun setFrac(v: Float) { frac.value = v.coerceIn(0.05f, 0.95f); onChange?.invoke() }
-    fun setBarWidth(v: Float) { barWidth.value = v.coerceIn(12f, 36f); onChange?.invoke() }
+    fun setBarWidth(v: Float) { barWidth.value = v.coerceIn(5f, 36f); onChange?.invoke() }
     fun setBarLength(v: Float) { barLength.value = v.coerceIn(48f, 150f); onChange?.invoke() }
     fun setOpacity(v: Float) { opacity.value = v }
 }

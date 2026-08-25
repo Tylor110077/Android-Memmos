@@ -164,6 +164,11 @@ fun PanelHost(
                     onWidthChange = model::setBarWidth,
                     onLengthChange = model::setBarLength,
                     onDismiss = { model.sheetOpen.value = false },
+                    // 点空白：整个退出悬浮窗（抽屉+面板），浮条贴边保留，下次滑开是初始面板
+                    onDismissAll = {
+                        model.sheetOpen.value = false
+                        onClose()
+                    },
                 )
             }
         }

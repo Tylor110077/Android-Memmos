@@ -90,10 +90,11 @@ class FloatingService : Service() {
     override fun onCreate() {
         super.onCreate()
         wm = getSystemService(Context.WINDOW_SERVICE) as WindowManager
-        // 位置/大小变化都走这里：重算热区尺寸（scale 影响视觉与触控）+ 停靠位置
+        // 位置/大小变化都走这里：重算热区尺寸（scale 影响视觉与触控）+ 停靠位置。
+        // 滑块拖动是连续变化，必须瞬时定位——220ms 窗口动画被每帧 cancel+重启会闪一下（用户反馈）
         model.onChange = {
             applyScaleToTabWindow()
-            applyRestingPosition(animated = true)
+            applyRestingPosition(animated = false)
         }
     }
 
