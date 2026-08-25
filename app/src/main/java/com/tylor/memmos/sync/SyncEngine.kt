@@ -229,26 +229,77 @@ object SyncEngine {
         // ── 上传：xhs 剪藏（带评论/作者/标签/媒体，互相补全：手机有而电脑没有的内容推上去） ──
         var up = 0; var skip = 0
         val ups = local.filter { it.origin != "vault" }
-        if (ups.isNotEmpty()) {
+        // 进度只统计「需要同步的项」：远端无此路径或从未上传过 → 需要（已最新不计入）
+        val needUp = ups.count { n ->
+            val p = mdPath(client, n)
+            remote[p] == null || n.originPath != p
+        }
+        if (needUp > 0) {
             var doneU = 0
-            progress.value = SyncProgress("上传到电脑", 0, ups.size)
+            progress.value = SyncProgress("上传到电脑", 0, needUp)
             for (note in ups) {
-                if (pushNote(ctx, client, note, local, remote)) up++ else skip++
-                doneU++
-                progress.value = SyncProgress("上传到电脑", doneU, ups.size)
+                val p = mdPath(client, note)
+                val needed = remote[p] == null || note.originPath != p
+                if (pushNote(ctx, client, note, local, remote)) up++
+                else if (needed) skip++
+                if (needed) {
+                    doneU++
+                    progress.value = SyncProgress("上传到电脑", doneU, needUp)
+                }
             }
         }
 
         // ── 下载/更新：远端 md（按 originPath 对位，指纹不同才拉） ──
         var down = 0
         val vaultDir = java.io.File(ctx.filesDir, "vault").apply { mkdirs() }
+        // 进度同样只统计需要下载的项（非帖子 md + 缺失附件；已最新不计入）
+        fun needFile(path: String, item: SyncClient.InvItem): Boolean {
+            if (isPostMd(path)) return false
+            if (path.endsWith(".md", true)) {
+                val ex = local.firstOrNull { it.originPath == path }
+                return ex == null || sha16(ex.rawMd.orEmpty()) != item.sha256
+            }
+            // 附件（媒体/文档）：原样保存到 vault，Library「同步文件」区展示；
+            // 已存在且为合法二进制内容才跳过（旧版把媒体当 md 下载过，留下的是乱码文本）
+            val f = java.io.File(vaultDir, path)
+            return !(f.exists() && f.length() > 0 && isBinaryHead(f))
+        }
+
+        fun isBinaryHead(f: java.io.File): Boolean {
+            val head = runCatching {
+                f.inputStream().use { it.readNBytes(16) }
+            }.getOrNull() ?: return false
+            val b = head
+            val ok = (b.size > 2 && b[0] == 0xFF.toByte() && b[1] == 0xD8.toByte()) || // jpg
+                (b.size > 4 && b[0] == 0x89.toByte() && b[1] == 0x50.toByte()) || // png
+                (b.size > 4 && b[0] == 0x25.toByte() && b[1] == 0x50.toByte()) || // %PDF
+                (b.size > 4 && b[0] == 0x50.toByte() && b[1] == 0x4B.toByte()) || // PK(zip/docx)
+                (b.size > 12 && String(b, 4, 4) == "ftyp") || // mp4/mov
+                (b.size > 3 && b[0] == 0x49.toByte() && b[1] == 0x44.toByte() && b[2] == 0x33.toByte()) // id3
+            return ok
+        }
+        val needDown = remote.count { (path, item) -> needFile(path, item) }
+        android.util.Log.d(
+            "MemmosDbg",
+            "sync: inventory=${remote.size} (posts=${remote.count { isPostMd(it.key) }}) needUp=$needUp needDown=$needDown",
+        )
+        if (needDown > 0) progress.value = SyncProgress("下载到手机", 0, needDown)
         var doneD = 0
         for ((path, item) in remote) {
-            progress.value = SyncProgress("下载到手机", doneD, remote.size)
-            if (isPostMd(path)) { doneD++; continue } // 帖子：源在手机库，不下载成 vault 笔记（防重复传递）
-            val existing = local.indexOfFirst { it.originPath == path }
-            // 已有且内容与远端一致 → 跳过；Obsidian 侧改过（指纹不同）→ 更新手机（双向补全）
-            if (existing >= 0 && sha16(local[existing].rawMd.orEmpty()) == item.sha256) continue
+            if (!needFile(path, item)) continue // 帖子/已最新一致 → 跳过；Obsidian 侧改过（指纹不同）→ 更新手机
+            doneD++
+            progress.value = SyncProgress("下载到手机", doneD.coerceAtMost(needDown), needDown)
+            if (!path.endsWith(".md", true)) {
+                // 附件下载：原样写 vault（不做 md 解析——旧版把媒体当笔记下载污染剪藏库）
+                val f = java.io.File(vaultDir, path)
+                val b64 = runCatching { client.getBinary(path) }.getOrDefault("")
+                if (b64.isNotBlank()) {
+                    f.parentFile?.mkdirs()
+                    f.writeBytes(Base64.decode(b64, Base64.NO_WRAP))
+                }
+                continue
+            }
+            android.util.Log.d("MemmosDbg", "down md: $path sha=${item.sha256.take(8)}")
             runCatching {
                 val md = client.getFile(path)
                 if (sha16(md) != item.sha256) return@runCatching // 内容变动中，跳过保一致
@@ -258,7 +309,8 @@ object SyncEngine {
                     AppPrefs.profileName(ctx).ifBlank { null },
                     AppPrefs.profileAvatar(ctx).ifBlank { null },
                 )
-                if (existing >= 0) local[existing] = note else local.add(0, note)
+                val idx = local.indexOfFirst { it.originPath == path }
+                if (idx >= 0) local[idx] = note else local.add(0, note)
                 down++
                 // md 引用的本地媒体一并拉取：![](media/x) / ![[media/x]] / <video src> / [x](media/x)
                 // 支持 ../media/（分类子目录引用根级 media，同 XHS Notes 结构）
