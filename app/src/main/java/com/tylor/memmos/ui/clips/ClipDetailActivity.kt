@@ -495,7 +495,7 @@ private fun InlineVideoPlayer(file: File, autoplay: Boolean, cover: String? = nu
     if (fullscreen) {
         Dialog(
             onDismissRequest = { exitFullscreen() },
-            properties = DialogProperties(usePlatformDefaultWidth = false),
+            properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
         ) {
             FullscreenPlayer(
                 file = file, startMs = position, audio = audio, activity = activity,
@@ -897,7 +897,7 @@ private fun ImageViewer(ctx: Context, urls: List<String>, initialPage: Int, onDi
 
     Dialog(
         onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false),
+        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
     ) {
         Box(
             Modifier
