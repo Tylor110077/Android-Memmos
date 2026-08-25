@@ -201,6 +201,7 @@ class XhsCaptureService : Service() {
                 JSONObject(inner)
             }.getOrNull()
             if (parsed != null) {
+                val ogImage = parsed.optString("ogImage").takeIf { it.startsWith("http") }
                 val jsVideo = parsed.optString("video").takeIf { it.startsWith("http") }
                 val netVideo = jsVideo ?: videoCandidates.firstOrNull { it.startsWith("http") }
                 val noteId = parsed.optString("noteId").ifBlank {
@@ -240,7 +241,7 @@ class XhsCaptureService : Service() {
                         }
                     },
                 )
-                mergeAndSave(note)
+                mergeAndSave(note, ogImage)
             } else {
                 httpFallback()
             }
@@ -248,7 +249,7 @@ class XhsCaptureService : Service() {
     }
 
     /** im importer 方式合并（视频真地址/封面/字段兜底），失败仍保存 DOM 结果 */
-    private fun mergeAndSave(domNote: ClipNote) {
+    private fun mergeAndSave(domNote: ClipNote, ogImage: String? = null) {
         handled = true
         update(0.8f, "合并抓取中…")
         scope.launch {
@@ -269,13 +270,19 @@ class XhsCaptureService : Service() {
                 // 媒体必须与笔记 ID 严格对应：__INITIAL_STATE__（httpNote）是最权威的数据链
                 // （页面 DOM 的 .media-container 等选择器在桌面版会命中"相关推荐"卡片 → 封面/视频错位）；
                 // DOM/网络拦截只在权威链缺失（变体页）时兜底，且兜底前过滤预览卡（页面上已滤）。
-                imageUrls = (httpNote?.imageUrls?.takeIf { it.isNotEmpty() } ?: domNote.imageUrls)
-                    .ifEmpty {
-                        val c = coverCandidates.firstOrNull {
-                            it.startsWith("http") && !it.contains("notes_pre_post") && !it.contains("spectrum")
+                // 图片优先级：① __INITIAL_STATE__ 权威链 ② og:image（=本文封面，页面 meta）
+                //   ③ DOM 收集（桌面版有"相关推荐"图风险）④ 网络拦截（已滤预览卡）
+                imageUrls = (httpNote?.imageUrls?.takeIf { it.isNotEmpty() } ?: run {
+                    val og = ogImage
+                    when {
+                        og != null -> listOf(og) + domNote.imageUrls.filter { it != og }
+                        else -> domNote.imageUrls.ifEmpty {
+                            coverCandidates.filter {
+                                it.startsWith("http") && !it.contains("notes_pre_post") && !it.contains("spectrum")
+                            }
                         }
-                        if (c != null) listOf(c) else emptyList()
-                    },
+                    }
+                }),
                 videoUrl = httpNote?.videoUrl ?: domNote.videoUrl,
                 type = if ((httpNote?.videoUrl ?: domNote.videoUrl) != null) "video" else domNote.type,
             )

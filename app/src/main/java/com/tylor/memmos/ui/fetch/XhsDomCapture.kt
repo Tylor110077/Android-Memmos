@@ -77,12 +77,15 @@ object XhsDomCapture {
       .filter(function(n){return /sns-webpic/i.test(n) && n.indexOf('avatar')===-1 && n.indexOf('notes_pre_post')===-1 && n.indexOf('spectrum')===-1});
   }catch(e){}
   if (!images.length && wp.length) images.push(wp[0]);
-  // 兜底二：og:image 封面（页面 meta，与正文封面一致）
-  if (!images.length) {
+  // 兜底二：og:image 封面（页面 meta，与正文封面一致），并单独透出给合并层
+  // （变体页 __INITIAL_STATE__ 缺失时，og:image 是唯一可靠的"本文封面"，优先于 DOM 收集结果）
+  var ogImage='';
+  try{
     var og=document.querySelector('meta[property="og:image"]');
-    var ogv=og?(og.content||og.getAttribute('content')):'';
-    if (ogv && ogv.indexOf('http')===0) images.push(ogv);
-  }
+    ogImage=og?(og.content||og.getAttribute('content')):'';
+    if (ogImage && ogImage.indexOf('http')===0) { if(images.indexOf(ogImage)===-1) images.push(ogImage); }
+    else if (ogImage && ogImage.indexOf('http')!==0) ogImage='';
+  }catch(e){ogImage='';}
   // DOM 实测结构（2026-08）：.parent-comment 内 .comment-item（主）+ .comment-item.comment-item-sub（回复）。
   // 页面上没有 .sub-comment 类；两元素深度不同（主 depth2 / 回复 depth4），不能依赖 :scope（部分 WebView 不支持会抛异常
   // 导致整段提取作废降级 HTTP），改为类名过滤 + try/catch：任何选择器问题只丢评论、不丢整条笔记
@@ -132,6 +135,6 @@ object XhsDomCapture {
     }
   }
   var commentHtml = scope ? scope.outerHTML.slice(0, 150000) : '';
-  return JSON.stringify({title:title,desc:desc,author:author,avatar:avatar,tags:tags,images:images,video:video,comments:comments,noteId:noteId,commentHtml:commentHtml});
+  return JSON.stringify({title:title,desc:desc,author:author,avatar:avatar,tags:tags,images:images,ogImage:ogImage,video:video,comments:comments,noteId:noteId});
 })()"""
 }
