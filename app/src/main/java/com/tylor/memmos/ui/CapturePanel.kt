@@ -5,6 +5,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -90,98 +91,113 @@ fun CapturePanel(
                 ),
             ),
         )
-        Column(
+        BoxWithConstraints(
             Modifier.fillMaxWidth()
                 // 上下 34dp：NO_LIMITS 后窗口延伸进状态栏/手势区，补偿避免内容被系统 UI 压住
                 .padding(start = 20.dp, end = 20.dp, top = 34.dp, bottom = 34.dp),
         ) {
-            // 头部（模板 Header）：玻璃圆形设置/关闭钮 + 标题 + 配对 chip
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    "Memmos 捕捉",
-                    color = Color(0xFFF5F7FA), fontSize = 15.sp, fontWeight = FontWeight.Medium,
-                    letterSpacing = (-0.3).sp,
-                )
-                Spacer(Modifier.weight(1f))
-                Spacer(Modifier.width(10.dp)) // 配对 chip 与标题文本的最小间距（用户反馈太近）
-                PairedChip(paired)
-                Spacer(Modifier.width(10.dp))
-                GlassCircleButton(
-                    size = 40.dp,
-                    content = { IconGear(20.dp, Color.White) },
-                    onClick = { onOpenSettings() },
-                )
-                Spacer(Modifier.width(10.dp))
-                GlassCircleButton(
-                    size = 42.dp,
-                    content = { IconClose(22.dp, Color.White) },
-                    onClick = { onClose() },
-                )
-            }
-            Spacer(Modifier.height(14.dp))
-
-            Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
-                SectionLabel("最近剪藏")
-                if (recent.isEmpty()) {
-                    com.tylor.memmos.ui.components.EmptyState(
-                        title = "暂无剪藏",
-                        desc = "点上方 抓取当前笔记，或在内容 App「分享 → 更多 → Memmos」抓取第一篇",
+            // 黄金比例锚点：按钮顶落在面板可用高度 61.8% 处
+            // content 高度构成：header 40 + spacer 14 + 分区标签 ~40（anchorOffset = 54 + 40）
+            val anchor = maxHeight * 0.618f
+            Column(Modifier.fillMaxSize()) {
+                // 头部（模板 Header）：玻璃圆形设置/关闭钮 + 标题 + 配对 chip
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        "Memmos 捕捉",
+                        color = Color(0xFFF5F7FA), fontSize = 15.sp, fontWeight = FontWeight.Medium,
+                        letterSpacing = (-0.3).sp,
                     )
-                } else {
-                    recent.forEach { n ->
-                        RecentRow(note = n) { onOpenNote(n.id) }
-                    }
+                    Spacer(Modifier.weight(1f))
+                    Spacer(Modifier.width(10.dp)) // 配对 chip 与标题文本的最小间距（用户反馈太近）
+                    PairedChip(paired)
+                    Spacer(Modifier.width(10.dp))
+                    GlassCircleButton(
+                        size = 40.dp,
+                        content = { IconGear(20.dp, Color.White) },
+                        onClick = { onOpenSettings() },
+                    )
+                    Spacer(Modifier.width(10.dp))
+                    GlassCircleButton(
+                        size = 42.dp,
+                        content = { IconClose(22.dp, Color.White) },
+                        onClick = { onClose() },
+                    )
                 }
-                Spacer(Modifier.height(12.dp))
-                SectionLabel("快速抓取")
-                // 后台抓取入口（剪贴板识别 / 小红书分享面板直达），进度实时显示
-                Box(
+                Spacer(Modifier.height(14.dp))
+
+                // 最近剪藏滚动区：止于黄金锚点
+                Column(
                     Modifier
                         .fillMaxWidth()
-                        .height(48.dp)
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(BtnPrimaryBg)
-                        .clickable(enabled = !cap.running) { onCaptureCurrent() },
-                    contentAlignment = Alignment.Center,
+                        .height((anchor - 94.dp).coerceAtLeast(0.dp))
+                        .verticalScroll(rememberScrollState()),
                 ) {
-                    Text(
-                        if (cap.running) "抓取中…（进度见下方）" else "抓取当前笔记",
-                        color = BtnPrimaryText, fontSize = 13.sp, fontWeight = FontWeight.Medium,
-                        letterSpacing = 0.3.sp,
-                    )
+                    SectionLabel("最近剪藏")
+                    if (recent.isEmpty()) {
+                        com.tylor.memmos.ui.components.EmptyState(
+                            title = "暂无剪藏",
+                            desc = "点下方 抓取当前笔记，或在内容 App「分享 → 更多 → Memmos」抓取第一篇",
+                        )
+                    } else {
+                        recent.forEach { n ->
+                            RecentRow(note = n) { onOpenNote(n.id) }
+                        }
+                    }
                 }
-                if (cap.running) {
-                    Spacer(Modifier.height(8.dp))
-                    Row(
-                        Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
+
+                // 快速抓取区：黄金位以下（按钮顶 ≈ 61.8%）
+                Column(Modifier.fillMaxWidth().weight(1f)) {
+                    SectionLabel("快速抓取")
+                    Spacer(Modifier.height(10.dp))
+                    // 后台抓取入口（剪贴板识别 / 小红书分享面板直达），进度实时显示
+                    Box(
+                        Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(BtnPrimaryBg)
+                            .clickable(enabled = !cap.running) { onCaptureCurrent() },
+                        contentAlignment = Alignment.Center,
                     ) {
                         Text(
-                            "${cap.status} ${(cap.progress * 100).toInt()}%",
-                            fontSize = 11.sp, color = TextSoft,
-                            modifier = Modifier.weight(1f),
+                            if (cap.running) "抓取中…（进度见下方）" else "抓取当前笔记",
+                            color = BtnPrimaryText, fontSize = 13.sp, fontWeight = FontWeight.Medium,
+                            letterSpacing = 0.3.sp,
                         )
-                        Text("后台进行中", fontSize = 10.sp, color = Success)
                     }
-                    Spacer(Modifier.height(5.dp))
-                    LinearProgressIndicator(
-                        progress = { cap.progress },
-                        modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(99.dp)),
-                        color = ChipText,
-                        trackColor = Color(0x29FFFFFF),
-                    )
-                } else if (cap.done == true || cap.done == false) {
-                    Spacer(Modifier.height(8.dp))
+                    if (cap.running) {
+                        Spacer(Modifier.height(8.dp))
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                "${cap.status} ${(cap.progress * 100).toInt()}%",
+                                fontSize = 11.sp, color = TextSoft,
+                                modifier = Modifier.weight(1f),
+                            )
+                            Text("后台进行中", fontSize = 10.sp, color = Success)
+                        }
+                        Spacer(Modifier.height(5.dp))
+                        LinearProgressIndicator(
+                            progress = { cap.progress },
+                            modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(99.dp)),
+                            color = ChipText,
+                            trackColor = Color(0x29FFFFFF),
+                        )
+                    } else if (cap.done == true || cap.done == false) {
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            cap.status,
+                            fontSize = 11.sp, color = if (cap.done == true) Success else ChipText,
+                        )
+                    }
                     Text(
-                        cap.status,
-                        fontSize = 11.sp, color = if (cap.done == true) Success else ChipText,
+                        "① 在内容 App「分享 → 更多 → Memmos」识别当前帖子（当前支持小红书）；② 复制链接后点这里。均后台完成。",
+                        fontSize = 10.sp, color = TextSoft, lineHeight = 15.sp,
+                        modifier = Modifier.padding(top = 5.dp),
                     )
                 }
-                Text(
-                    "① 在内容 App「分享 → 更多 → Memmos」识别当前帖子（当前支持小红书）；② 复制链接后点这里。均后台完成。",
-                    fontSize = 10.sp, color = TextSoft, lineHeight = 15.sp,
-                    modifier = Modifier.padding(top = 5.dp),
-                )
             }
         }
     }
