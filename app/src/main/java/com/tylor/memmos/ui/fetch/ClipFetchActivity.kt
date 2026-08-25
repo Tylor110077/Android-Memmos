@@ -103,6 +103,7 @@ class ClipFetchActivity : ComponentActivity() {
                     handler.postDelayed({ finish() }, 2000)
                     return@launch
                 }
+                if (final != null) noteUrl = final // 短链→长链：展开结果作为抓取与落库链接
                 startWeb();
             }
             return
@@ -302,6 +303,8 @@ class ClipFetchActivity : ComponentActivity() {
                     "http(video=${httpNote?.videoUrl != null}, imgs=${httpNote?.imageUrls?.size}) err=${httpErr?.message}",
             )
             val merged = domNote.copy(
+                pageUrl = httpNote?.pageUrl?.takeIf { it.contains("discovery/item") || it.contains("explore") }
+                    ?: domNote.pageUrl, // 抓取/落库一律长链（httpNote=fetch 已展开短链）
                 title = domNote.title.takeIf { it != "未命名笔记" }
                     ?: httpNote?.title.orEmpty().ifBlank { domNote.title },
                 desc = domNote.desc.ifBlank { httpNote?.desc.orEmpty() },

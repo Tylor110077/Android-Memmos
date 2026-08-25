@@ -153,9 +153,8 @@ object XhsFetcher {
         if (noteObj?.first != null && finalNoteId != null && noteObj.first != finalNoteId) {
             error("链接已失效：分享链接过期并跳转到其它内容，请复制原贴完整链接重试")
         }
-        val noteId = (finalNoteId ?: noteObj?.first
-            ?: Regex("""/discovery/item/([a-zA-Z0-9]+)""").find(url)?.groupValues?.get(1)
-            ?: url.hashCode().toString())
+        // 冗余清理：最终页校验已保证 noteId 非空（非笔记页在上方报错），hash 兜底/url 正则回退不再可达
+        val noteId = finalNoteId!!
 
         if (noteObj == null) {
             val descFallback = Regex("""<div id="detail-desc" class="desc">([\s\S]*?)</div>""").find(html)
@@ -174,7 +173,7 @@ object XhsFetcher {
                 imageUrls = if (ogImage.startsWith("http")) listOf(ogImage) else emptyList(),
                 videoUrl = null,
                 type = "normal",
-                pageUrl = url,
+                pageUrl = finalUrl, // 短链已展开：落库/上传一律用长链（短链会失效）
                 clippedAt = System.currentTimeMillis(),
             )
         }
@@ -245,7 +244,7 @@ object XhsFetcher {
             imageUrls = images,
             videoUrl = video,
             type = note.optString("type"),
-            pageUrl = url,
+            pageUrl = finalUrl, // 短链已展开：落库/上传一律用长链（短链会失效）
             clippedAt = System.currentTimeMillis(),
         )
     }

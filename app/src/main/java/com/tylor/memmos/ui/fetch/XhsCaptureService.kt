@@ -70,6 +70,8 @@ class XhsCaptureService : Service() {
     private val videoCandidates = java.util.concurrent.CopyOnWriteArrayList<String>()
     private val coverCandidates = java.util.concurrent.CopyOnWriteArrayList<String>()
     private var webView: WebView? = null
+    /** 短链展开后的最终页 URL：DOM 路线落库 pageUrl 用长链（短链有时效） */
+    private var webFinalUrl: String? = null
     private var noteUrl = ""
     private var attempts = 0
     private var handled = false
@@ -124,6 +126,7 @@ class XhsCaptureService : Service() {
             }
 
             override fun onPageFinished(view: WebView, u: String) {
+                if (u.contains("xiaohongshu.com")) webFinalUrl = u // 展开结果（含真实 noteId）作长链依据
                 if (u.contains("xiaohongshu.com") && !handled) {
                     update(0.22f, "就绪，加载评论…")
                     handler.postDelayed({ checkReady() }, 1200)
@@ -205,7 +208,7 @@ class XhsCaptureService : Service() {
                     imageUrls = parsed.getJSONArray("images").let { a -> List(a.length()) { a.getString(it) } },
                     videoUrl = netVideo,
                     type = if (netVideo != null) "video" else "normal",
-                    pageUrl = noteUrl,
+                    pageUrl = webFinalUrl ?: noteUrl, // 短链→长链：DOM 落库一律长链
                     clippedAt = System.currentTimeMillis(),
                     comments = parsed.getJSONArray("comments").let { arr ->
                         List(arr.length()) { i ->
@@ -245,6 +248,9 @@ class XhsCaptureService : Service() {
                 runCatching { XhsFetcher.fetch(" $noteUrl") }.getOrNull()
             }
             val merged = domNote.copy(
+                // 抓取与落库一律用长链：httpNote 来自 fetch（短链已展开），最稳的锚；DOM 兜底
+                pageUrl = httpNote?.pageUrl?.takeIf { it.contains("discovery/item") || it.contains("explore") }
+                    ?: domNote.pageUrl,
                 title = domNote.title.takeIf { it != "未命名笔记" }
                     ?: httpNote?.title.orEmpty().ifBlank { domNote.title },
                 desc = domNote.desc.ifBlank { httpNote?.desc.orEmpty() },
