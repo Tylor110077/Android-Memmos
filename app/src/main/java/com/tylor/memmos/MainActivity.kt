@@ -97,6 +97,8 @@ import com.tylor.memmos.ui.fetch.XhsCaptureService
 import com.tylor.memmos.ui.login.XhsLoginActivity
 import com.tylor.memmos.ui.viewer.FileViewerActivity
 import com.tylor.memmos.ui.theme.AccentBrush
+import com.tylor.memmos.ui.theme.BtnPrimaryBg
+import com.tylor.memmos.ui.theme.BtnPrimaryText
 import com.tylor.memmos.ui.theme.AccentViolet
 import com.tylor.memmos.ui.theme.ChipBg
 import com.tylor.memmos.ui.theme.GlassFill
@@ -376,7 +378,12 @@ private fun CapturePage(
             contentAlignment = Alignment.Center,
         ) { Text("M", color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.Bold) }
         Spacer(Modifier.height(12.dp))
-        Text("Memmos 捕捉", color = TextHi, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+        Text("Memmos 捕捉", color = TextHi, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+        Text(
+            "多源内容 · 一键剪藏 · 沉淀到 Obsidian",
+            fontSize = 12.sp, color = TextFaint,
+            modifier = Modifier.padding(top = 6.dp, bottom = 10.dp),
+        )
         CaptureProgressCard()
         Spacer(Modifier.height(24.dp))
         Row(
@@ -1058,10 +1065,10 @@ private fun SettingsPage(message: String?, onMessage: (String?) -> Unit, onSync:
                     else -> "停止悬浮窗"
                 },
                 fontSize = 13.sp, fontWeight = FontWeight.Bold,
-                color = if (canDraw && running) Color(0xFFB4A7FF) else Color.White,
+                color = if (canDraw && running) Color(0xFFB4A7FF) else BtnPrimaryText,
                 modifier = Modifier
                     .clip(RoundedCornerShape(999.dp))
-                    .background(if (canDraw && running) SolidColor(Color(0x14FF2E4D)) else AccentBrush)
+                    .background(SolidColor(if (canDraw && running) Color(0x14FF2E4D) else BtnPrimaryBg))
                     .padding(horizontal = 14.dp, vertical = 8.dp),
             )
         }
@@ -1263,8 +1270,8 @@ private fun SettingsPage(message: String?, onMessage: (String?) -> Unit, onSync:
                     Modifier
                         .weight(1f)
                         .height(50.dp)
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(AccentBrush)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(BtnPrimaryBg) // mckp.live 主按钮：白底黑字
                         .clickable(enabled = !syncing) {
                             val c = SyncPrefs.load(ctx) ?: return@clickable
                             syncing = true; onMessage(null)
@@ -1325,9 +1332,27 @@ private fun SettingsPage(message: String?, onMessage: (String?) -> Unit, onSync:
 
         SectionLabel("关于")
         Spacer(Modifier.height(8.dp))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(28.dp)) {
+            Column(Modifier.weight(1f)) {
+                Text("产品", fontSize = 10.5.sp, color = TextFaint)
+                Text("Memmos 捕捉", fontSize = 11.sp, color = TextHi, modifier = Modifier.padding(top = 6.dp))
+                Text("多源内容沉淀 · Obsidian 同步", fontSize = 10.5.sp, color = TextFaint, modifier = Modifier.padding(top = 3.dp))
+            }
+            Column(Modifier.weight(1f)) {
+                Text("能力", fontSize = 10.5.sp, color = TextFaint)
+                Text("悬浮窗速抓 · 评论全量", fontSize = 11.sp, color = TextHi, modifier = Modifier.padding(top = 6.dp))
+                Text("视频封面 · 双向同步", fontSize = 10.5.sp, color = TextFaint, modifier = Modifier.padding(top = 3.dp))
+            }
+            Column(Modifier.weight(1f)) {
+                Text("当前源", fontSize = 10.5.sp, color = TextFaint)
+                Text("小红书", fontSize = 11.sp, color = TextHi, modifier = Modifier.padding(top = 6.dp))
+                Text("更多源规划中", fontSize = 10.5.sp, color = TextFaint, modifier = Modifier.padding(top = 3.dp))
+            }
+        }
         Text(
-            "Memmos 捕捉\n多内容源剪藏 · 本地库 + Obsidian 局域网同步\n（当前支持小红书；抓取能力参考 xiaohongshu-importer）",
-            fontSize = 11.sp, lineHeight = 17.sp, color = TextFaint,
+            "© 2026 Memmos · make capture effortless",
+            fontSize = 10.sp, color = TextFaint,
+            modifier = Modifier.fillMaxWidth().padding(top = 14.dp),
         )
         Spacer(Modifier.height(30.dp))
     }

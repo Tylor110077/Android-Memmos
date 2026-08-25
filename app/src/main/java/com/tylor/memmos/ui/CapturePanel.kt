@@ -37,6 +37,8 @@ import coil.compose.AsyncImage
 import com.tylor.memmos.data.ClipStore
 import com.tylor.memmos.sync.SyncPrefs
 import com.tylor.memmos.ui.fetch.XhsCaptureService
+import com.tylor.memmos.ui.theme.BtnPrimaryBg
+import com.tylor.memmos.ui.theme.BtnPrimaryText
 import com.tylor.memmos.ui.theme.ChipBg
 import com.tylor.memmos.ui.theme.ChipStroke
 import com.tylor.memmos.ui.theme.ChipText

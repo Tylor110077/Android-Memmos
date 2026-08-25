@@ -40,6 +40,11 @@ val TextHi = Color(0xFFF2F4F8)
 val TextMid = Color(0xFF9BA1AE)
 val TextFaint = Color(0xFF676D7A)
 
+/* 主按钮（mckp.live 风格：白色胶囊黑字；次级=透明+白描边） */
+val BtnPrimaryBg = Color(0xFFF4F4F5)
+val BtnPrimaryText = Color(0xFF0A0A0C)
+val BtnGhostBorder = Color(0x33FFFFFF)
+
 /* 功能色 */
 val Success = Color(0xFF46C882)
 val ChipBg = Color(0x2E8B7BFF) // 品牌紫 .18 容器
