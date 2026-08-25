@@ -51,6 +51,32 @@ object XhsFetcher {
      * 字符串内转义感知，遇到 } 配平即收——不依赖 </script> 边界。
      * 旧实现 (.*?)</script> 在登录态页面变体上会把 JSON 从字符串中间切断（实测）。
      */
+    /** 字符串感知的方括号配平：从 JSON 文本中按 key 提取首个数组原文（绕过整段解析失败） */
+    private fun extractJsonArrayRaw(text: String, key: String): String {
+        val k = text.indexOf("\"$key\"")
+        if (k < 0) return ""
+        val start = text.indexOf('[', k)
+        if (start < 0) return ""
+        var depth = 0; var inStr = false; var esc = false
+        for (i in start until text.length) {
+            val c = text[i]
+            when {
+                inStr -> when {
+                    esc -> esc = false
+                    c == '\\' -> esc = true
+                    c == '"' -> inStr = false
+                }
+                c == '"' -> inStr = true
+                c == '[' -> depth++
+                c == ']' -> {
+                    depth--
+                    if (depth == 0) return text.substring(start, i + 1)
+                }
+            }
+        }
+        return ""
+    }
+
     private fun extractInitialState(html: String): String? {
         val marker = html.indexOf("window.__INITIAL_STATE__=")
         if (marker < 0) return null
@@ -160,6 +186,22 @@ object XhsFetcher {
         // 冗余清理：最终页校验已保证 noteId 非空（非笔记页在上方报错），hash 兜底/url 正则回退不再可达
         val noteId = finalNoteId!!
 
+        // 整段 stateJson 解析失败（部分变体页）：绕过整段，直接按 key 配平提取 imageList
+        // —— 图集顺序以 imageList 为准（DOM 轮播预加载顺序是 2..10,1，会造成"首尾错位"）
+        val stateForImages = stateJson ?: ""
+        val fallbackImgs = if (noteObj == null) runCatching {
+            val raw = extractJsonArrayRaw(stateForImages, "imageList")
+            if (raw.isBlank()) emptyList()
+            else JSONArray(raw).let { a ->
+                List(a.length()) { i ->
+                    val o = a.optJSONObject(i) ?: return@let emptyList<String>()
+                    o.optString("urlDefault").takeIf { it.startsWith("http") }
+                        ?.let { if (it.startsWith("http://")) "https://" + it.substring(7) else it }
+                        ?: ""
+                }.filter { it.isNotEmpty() }
+            }
+        }.getOrDefault(emptyList()) else emptyList()
+
         if (noteObj == null) {
             val descFallback = Regex("""<div id="detail-desc" class="desc">([\s\S]*?)</div>""").find(html)
                 ?.groupValues?.get(1)?.replace(Regex("<[^>]+>"), "")?.replace("[话题]", "")?.trim().orEmpty()
@@ -174,7 +216,11 @@ object XhsFetcher {
                 desc = descFallback,
                 author = "",
                 tags = emptyList(),
-                imageUrls = if (ogImage.startsWith("http")) listOf(ogImage) else emptyList(),
+                imageUrls = when {
+                    fallbackImgs.isNotEmpty() -> fallbackImgs // imageList 顺序（权威）
+                    ogImage.startsWith("http") -> listOf(ogImage)
+                    else -> emptyList()
+                },
                 videoUrl = null,
                 type = "normal",
                 pageUrl = finalUrl, // 短链已展开：落库/上传一律用长链（短链会失效）
