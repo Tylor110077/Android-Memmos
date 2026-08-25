@@ -289,7 +289,7 @@ fun MainTabs(clipCapture: Boolean = false) {
                                 runCatching { SyncEngine.sync(ctx, c) }
                                     .onSuccess { r ->
                                         reload() // 同步完成立即刷新剪藏库（原来要等 ON_RESUME，需退出笔记才更新）
-                                        message = "同步完成：上传 ${r.uploaded} · 下载 ${r.downloaded} · 已是最新 ${r.skipped}"
+                                        message = syncDoneMessage(r)
                                     }
                                     .onFailure {
                                         reload() // 部分成功也尽量刷新
@@ -1308,7 +1308,7 @@ private fun SettingsPage(message: String?, onMessage: (String?) -> Unit, onSync:
                             syncing = true; onMessage(null)
                             scope.launch {
                                 runCatching { SyncEngine.sync(ctx, c) }
-                                    .onSuccess { r -> onMessage("同步完成：上传 ${r.uploaded} · 下载 ${r.downloaded} · 已是最新 ${r.skipped}") }
+                                    .onSuccess { r -> onMessage(syncDoneMessage(r)) }
                                     .onFailure { onMessage("${it.javaClass.simpleName}: ${it.message}") }
                                 syncing = false
                             }
@@ -1384,6 +1384,13 @@ private fun fileBadge(ext: String): String = when (ext.lowercase()) {
     "pptx", "ppt" -> "P"
     "xlsx", "xls", "csv" -> "X"
     else -> ext.take(3).uppercase()
+}
+
+/** 同步结果消息：两端一致时给出明确「无内容可同步」提示（用户要求） */
+private fun syncDoneMessage(r: SyncEngine.Result): String = when {
+    r.uploaded == 0 && r.downloaded == 0 ->
+        "两端已一致：没有需要同步的内容（上传 0 · 下载 0 · 已是最新 ${r.skipped}）"
+    else -> "同步完成：上传 ${r.uploaded} · 下载 ${r.downloaded} · 已是最新 ${r.skipped}"
 }
 
 private fun hasXhsSession(ctx: Context): Boolean {

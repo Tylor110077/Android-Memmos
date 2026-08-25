@@ -26,11 +26,51 @@ object SyncEngine {
     data class Result(val uploaded: Int, val downloaded: Int, val skipped: Int)
 
     /** 帖子 md 判定：我们上传的剪藏（固定结构 origin content/{标题}/note.md 或带 memmos-id 的 md）。
-     * 下载侧必须跳过它们——否则电脑端的帖子会被当作普通笔记下载回手机，形成重复传递。 */
+     * 下载侧按「手机是否已有该 memmos-id」决定跳过/重组（用户模型：手机缺失时把文件组合回帖子）。 */
     private fun isPostMd(path: String, md: String? = null): Boolean {
         if (path.contains("/origin content/")) return true
         if (md != null && md.contains("memmos-id:")) return true
         return false
+    }
+
+    private val POST_ID_RE = Regex("""^memmos-id:\s*(\S+)""", RegexOption.MULTILINE)
+
+    /**
+     * Obsidian 帖子文件 → 手机帖子（用户模型第 3 条：手机缺失时重组）。
+     * id 用 memmos-id 与已有帖子对齐（去重/更新）；origin=xhs（「vault 副本清理」不误删）；
+     * md 里的媒体引用映射为 vault 下已下载的本地路径（canonical，阅读器直接可用）。
+     */
+    private fun fromPostToClip(
+        ctx: Context,
+        path: String,
+        md: String,
+        postId: String,
+        authorOverride: String?,
+        avatarOverride: String?,
+    ): ClipNote {
+        val base = fromMarkdown(path, md, authorOverride, avatarOverride)
+        val vaultDir = java.io.File(ctx.filesDir, "vault")
+        val mdDir = path.substringBeforeLast('/')
+        fun localOf(rel: String) = java.io.File(vaultDir, "$mdDir/$rel").canonicalFile.absolutePath
+        val imgRefs = Regex("""!\[[^\]]*\]\(((?:\.\./)*media/[^)]+)\)""").findAll(md)
+            .map { localOf(it.groupValues[1]) }.toList()
+        val vidRel = Regex("""src="((?:\.\./)*media/[^"]+)"""").find(md)?.groupValues?.get(1)
+        val localVid = vidRel?.let { localOf(it) }
+        val clipped = Regex("""^clippedAt:\s*(.+)$""", RegexOption.MULTILINE).find(md)?.groupValues?.get(1)?.trim()
+        val clippedAt = runCatching {
+            SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.CHINA).parse(clipped.orEmpty()).time
+        }.getOrDefault(base.clippedAt)
+        return base.copy(
+            id = postId,
+            origin = "xhs",
+            imageUrls = (imgRefs + base.imageUrls).distinct(),
+            type = if (localVid != null) "video" else base.type,
+            videoUrl = if (localVid != null) null else base.videoUrl,
+            localVideoPath = localVid,
+            clippedAt = clippedAt,
+            originPath = path,
+            rawMd = md,
+        )
     }
 
     /** 同步根目录：用户要求固定进 Memmos graph（子文件夹按分类自动创建，无需预建） */
@@ -262,9 +302,10 @@ object SyncEngine {
          */
         var doneD = 0
         val needDown = remote.count { (path, item) ->
-            if (isPostMd(path) || !path.endsWith(".md", true)) return@count false
+            if (!path.endsWith(".md", true)) return@count false
             val ex = local.firstOrNull { it.originPath == path }
-            ex == null || sha16(ex.rawMd.orEmpty()) != item.sha256
+            if (ex != null && sha16(ex.rawMd.orEmpty()) == item.sha256) return@count false
+            true // 其余（普通文件、帖子缺失/更新）都算工作项；循环内精确再跳过
         }
         android.util.Log.d(
             "MemmosDbg",
@@ -274,21 +315,26 @@ object SyncEngine {
         runCatching { java.io.File(vaultDir, "Memmos graph/media").deleteRecursively() }
         if (needDown > 0) progress.value = SyncProgress("下载到手机", 0, needDown)
         for ((path, item) in remote) {
-            if (isPostMd(path) || !path.endsWith(".md", true)) continue
+            if (!path.endsWith(".md", true)) continue
+            // 先取内容：帖子需解析 memmos-id 判重（手机缺失 → 重组为帖子；已有 → 跳过防重复）
+            val md = runCatching { client.getFile(path) }.getOrNull() ?: continue
+            if (sha16(md) != item.sha256) continue // 内容变动中，跳过保一致
             val ex = local.firstOrNull { it.originPath == path }
             if (ex != null && sha16(ex.rawMd.orEmpty()) == item.sha256) continue // 一致跳过
+            val postId = POST_ID_RE.find(md)?.groupValues?.get(1)
+            if (postId != null && local.any { it.id == postId && it.origin != "vault" }) continue // 已有同帖
             doneD++
             progress.value = SyncProgress("下载到手机", doneD.coerceAtMost(needDown), needDown)
-            android.util.Log.d("MemmosDbg", "down md: $path sha=${item.sha256.take(8)}")
+            android.util.Log.d("MemmosDbg", if (postId != null) "down post: $path id=$postId" else "down md: $path")
             runCatching {
-                val md = client.getFile(path)
-                if (sha16(md) != item.sha256) return@runCatching // 内容变动中，跳过保一致
                 // 个人资料兜底：Obsidian 同步笔记自动带上用户设置的名字/头像（空则不覆盖）
-                val note = fromMarkdown(
-                    path, md,
-                    AppPrefs.profileName(ctx).ifBlank { null },
-                    AppPrefs.profileAvatar(ctx).ifBlank { null },
-                )
+                val author = AppPrefs.profileName(ctx).ifBlank { null }
+                val avatar = AppPrefs.profileAvatar(ctx).ifBlank { null }
+                val note = if (postId != null) {
+                    fromPostToClip(ctx, path, md, postId, author, avatar) // Obsidian 帖子 → 手机帖子（重组）
+                } else {
+                    fromMarkdown(path, md, author, avatar)
+                }
                 val idx = local.indexOfFirst { it.originPath == path }
                 if (idx >= 0) local[idx] = note else local.add(0, note)
                 down++
