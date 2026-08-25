@@ -307,11 +307,9 @@ class XhsCaptureService : Service() {
             // 在 anchor 内的按 anchor 顺序，其余（DOM 多出的）按原相对序追加到尾部。
             // 保证保存顺序=imageList 顺序，任何兜底路径都绕不开。
             val anchor = httpNote?.imageUrls.orEmpty()
-            val ordered = remember(merged.imageUrls) {
-                if (anchor.isEmpty()) merged.imageUrls
-                else (anchor.filter { a -> merged.imageUrls.any { it == a } } +
-                    merged.imageUrls.filter { it !in anchor }).distinct()
-            }
+            val ordered = if (anchor.isEmpty()) merged.imageUrls
+            else (anchor.filter { a -> merged.imageUrls.any { it == a } } +
+                merged.imageUrls.filter { it !in anchor }).distinct()
             handler.post { finish(merged.copy(imageUrls = ordered)) }
         }
     }
