@@ -69,13 +69,19 @@ object XhsDomCapture {
   var vEl2 = q('video');
   var poster = vEl2 ? (vEl2.poster || vEl2.getAttribute('poster') || '') : '';
   if (poster && poster.indexOf('http')===0 && images.indexOf(poster)===-1) images.unshift(poster);
-  // 封面兜底：资源记录里扫 sns-webpic（封面图加载请求）
+  // 封面兜底：资源记录里扫 sns-webpic（封面图加载请求）。
+  // 排除 notes_pre_post（笔记预览卡/分享卡，不是正文封面——曾把预览卡当第一张图导致封面错位）
+  var wp = [];
+  try{
+    wp=(performance.getEntriesByType('resource')||[]).map(function(r){return r.name||''})
+      .filter(function(n){return /sns-webpic/i.test(n) && n.indexOf('avatar')===-1 && n.indexOf('notes_pre_post')===-1});
+  }catch(e){}
+  if (!images.length && wp.length) images.push(wp[0]);
+  // 兜底二：og:image 封面（页面 meta，与正文封面一致）
   if (!images.length) {
-    try{
-      var wp=(performance.getEntriesByType('resource')||[]).map(function(r){return r.name||''})
-        .filter(function(n){return /sns-webpic/i.test(n) && n.indexOf('avatar')===-1});
-      if(wp.length) images.push(wp[0]);
-    }catch(e){}
+    var og=document.querySelector('meta[property="og:image"]');
+    var ogv=og?(og.content||og.getAttribute('content')):'';
+    if (ogv && ogv.indexOf('http')===0) images.push(ogv);
   }
   // DOM 实测结构（2026-08）：.parent-comment 内 .comment-item（主）+ .comment-item.comment-item-sub（回复）。
   // 页面上没有 .sub-comment 类；两元素深度不同（主 depth2 / 回复 depth4），不能依赖 :scope（部分 WebView 不支持会抛异常

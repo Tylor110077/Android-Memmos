@@ -10,3 +10,4 @@ captures/
 cxx/
 # 临时验证截图；定稿截图归档在 docs/ui-design/app-screens/
 shots/
+backups/
