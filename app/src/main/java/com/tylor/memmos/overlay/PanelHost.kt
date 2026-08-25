@@ -98,13 +98,14 @@ fun PanelHost(
                 )
             }
         }
-        // 右侧面板外透明捕获层：点击关闭 / 跟手拖拽关闭（本层不绘制颜色，桌面原样透出）
+        // 面板外侧透明捕获层：点击关闭 / 跟手拖拽关闭（本层不绘制颜色，桌面原样透出）。
+        // 对齐面板对侧：浮条在左→空白在右（CenterEnd）；浮条在右→空白在左（CenterStart）。
         // 只允许存在一层：叠加多个 Box 时最上层会把下层拖拽吞掉（Compose 命中测试）
         Box(
             Modifier
                 .fillMaxHeight()
                 .fillMaxWidth(0.14f)
-                .align(Alignment.CenterEnd)
+                .align(if (panelOnLeft) Alignment.CenterEnd else Alignment.CenterStart)
                 .clickable(onClick = onClose)
                 .swipeDrag(onDragStart, onDrag, onRelease),
         )
