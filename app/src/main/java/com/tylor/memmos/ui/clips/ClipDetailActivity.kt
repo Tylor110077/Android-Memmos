@@ -367,7 +367,7 @@ private fun VideoCoverBlock(cover: String?, progress: Float?, onDownload: () -> 
     Box(
         Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(12.dp))
             .clickable(enabled = !busy, onClick = onDownload),
     ) {
         if (cover != null) {
@@ -509,7 +509,7 @@ private fun InlineVideoPlayer(file: File, autoplay: Boolean, cover: String? = nu
                 .fillMaxWidth()
                 .aspectRatio(aspect)
                 .heightIn(max = 360.dp)
-                .clip(RoundedCornerShape(16.dp))
+                .clip(RoundedCornerShape(12.dp))
                 .background(Color.Black),
         ) {
             VideoSurface(
@@ -842,7 +842,7 @@ private fun ImagePager(urls: List<String>, onOpenViewer: (Int) -> Unit) {
     Box(
         Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp)),
+            .clip(RoundedCornerShape(12.dp)),
     ) {
         HorizontalPager(
             state = pagerState,
@@ -879,7 +879,7 @@ private fun SingleImage(url: String, onOpen: () -> Unit) {
         contentScale = ContentScale.FillWidth,
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(12.dp))
             .clickable { onOpen() },
     )
 }

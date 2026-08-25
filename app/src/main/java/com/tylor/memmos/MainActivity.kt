@@ -389,8 +389,8 @@ private fun CapturePage(
         Row(
             Modifier
                 .fillMaxWidth()
-                .background(GlassFill, RoundedCornerShape(16.dp))
-                .border(1.dp, GlassStrokeSoft, RoundedCornerShape(16.dp))
+                .background(GlassFill, RoundedCornerShape(12.dp))
+                .border(1.dp, GlassStrokeSoft, RoundedCornerShape(12.dp))
                 .padding(horizontal = 14.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -847,8 +847,8 @@ private fun SettingsPage(message: String?, onMessage: (String?) -> Unit, onSync:
         Row(
             Modifier
                 .fillMaxWidth()
-                .background(GlassFill, RoundedCornerShape(16.dp))
-                .border(1.dp, GlassStrokeSoft, RoundedCornerShape(16.dp))
+                .background(GlassFill, RoundedCornerShape(12.dp))
+                .border(1.dp, GlassStrokeSoft, RoundedCornerShape(12.dp))
                 .padding(horizontal = 14.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -912,8 +912,8 @@ private fun SettingsPage(message: String?, onMessage: (String?) -> Unit, onSync:
         Row(
             Modifier
                 .fillMaxWidth()
-                .background(GlassFill, RoundedCornerShape(16.dp))
-                .border(1.dp, GlassStrokeSoft, RoundedCornerShape(16.dp))
+                .background(GlassFill, RoundedCornerShape(12.dp))
+                .border(1.dp, GlassStrokeSoft, RoundedCornerShape(12.dp))
                 .padding(horizontal = 14.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -946,8 +946,8 @@ private fun SettingsPage(message: String?, onMessage: (String?) -> Unit, onSync:
         Column(
             Modifier
                 .fillMaxWidth()
-                .background(GlassFill, RoundedCornerShape(16.dp))
-                .border(1.dp, GlassStrokeSoft, RoundedCornerShape(16.dp))
+                .background(GlassFill, RoundedCornerShape(12.dp))
+                .border(1.dp, GlassStrokeSoft, RoundedCornerShape(12.dp))
                 .padding(horizontal = 14.dp, vertical = 12.dp),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1014,12 +1014,12 @@ private fun SettingsPage(message: String?, onMessage: (String?) -> Unit, onSync:
                 .fillMaxWidth()
                 .background(
                     if (canDraw && running) Color(0x0D46C882) else GlassFill,
-                    RoundedCornerShape(16.dp),
+                    RoundedCornerShape(12.dp),
                 )
                 .border(
                     1.dp,
                     if (canDraw && running) Color(0x3346C882) else GlassStrokeSoft,
-                    RoundedCornerShape(16.dp),
+                    RoundedCornerShape(12.dp),
                 )
                 .clickable {
                     when {
@@ -1077,8 +1077,8 @@ private fun SettingsPage(message: String?, onMessage: (String?) -> Unit, onSync:
         Row(
             Modifier
                 .fillMaxWidth()
-                .background(GlassFill, RoundedCornerShape(16.dp))
-                .border(1.dp, GlassStrokeSoft, RoundedCornerShape(16.dp))
+                .background(GlassFill, RoundedCornerShape(12.dp))
+                .border(1.dp, GlassStrokeSoft, RoundedCornerShape(12.dp))
                 .padding(horizontal = 14.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -1290,8 +1290,8 @@ private fun SettingsPage(message: String?, onMessage: (String?) -> Unit, onSync:
                     Modifier
                         .width(110.dp)
                         .height(50.dp)
-                        .clip(RoundedCornerShape(16.dp))
-                        .border(1.dp, Color(0x668B7BFF), RoundedCornerShape(16.dp))
+                        .clip(RoundedCornerShape(12.dp))
+                        .border(1.dp, Color(0x668B7BFF), RoundedCornerShape(12.dp))
                         .clickable {
                             SyncPrefs.clear(ctx)
                             paired = false
@@ -1443,12 +1443,12 @@ private fun ClipRow(
         Modifier
             .fillMaxWidth()
             .padding(bottom = 10.dp)
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(12.dp))
             .background(GlassFill)
             .border(
                 1.dp,
                 if (selected) Color(0xFFFF5B6E) else GlassStrokeSoft,
-                RoundedCornerShape(16.dp),
+                RoundedCornerShape(12.dp),
             )
             .combinedClickable(
                 onClick = onClick,
@@ -1572,7 +1572,7 @@ private fun CtaButton(text: String, onClick: () -> Unit) {
         Modifier
             .fillMaxWidth()
             .height(50.dp)
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(12.dp))
             .background(AccentBrush)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
@@ -1587,8 +1587,8 @@ private fun GhostButton(text: String, onClick: () -> Unit) {
         Modifier
             .fillMaxWidth()
             .height(50.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .border(1.dp, Color(0x668B7BFF), RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(12.dp))
+            .border(1.dp, Color(0x668B7BFF), RoundedCornerShape(12.dp))
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {

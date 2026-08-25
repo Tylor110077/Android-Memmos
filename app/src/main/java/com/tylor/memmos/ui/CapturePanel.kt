@@ -113,9 +113,9 @@ SectionLabel("快速抓取")
                 Modifier
                     .fillMaxWidth()
                     .height(44.dp)
-                    .clip(RoundedCornerShape(16.dp))
+                    .clip(RoundedCornerShape(12.dp))
                     .background(ChipBg)
-                    .border(1.dp, ChipStroke, RoundedCornerShape(16.dp))
+                    .border(1.dp, ChipStroke, RoundedCornerShape(12.dp))
                     .clickable(enabled = !cap.running) { onCaptureCurrent() },
                 contentAlignment = Alignment.Center,
             ) {

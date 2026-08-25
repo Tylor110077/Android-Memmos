@@ -66,7 +66,7 @@ val CoverGradients = listOf(
 /** 圆角体系：28 面板 / 16 卡片 / 12 次级容器 / 999 胶囊 */
 object Shapes {
     val Panel = RoundedCornerShape(28.dp)
-    val Card = RoundedCornerShape(16.dp)
+    val Card = RoundedCornerShape(12.dp)
     val Sub = RoundedCornerShape(12.dp)
     val Pill = RoundedCornerShape(999.dp)
 }

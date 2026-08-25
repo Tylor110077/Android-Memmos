@@ -152,7 +152,7 @@ private fun PositionWidget(
     Box(
         Modifier
             .size(width = 74.dp, height = 128.dp)
-            .border(1.5.dp, Color(0x47FFFFFF), RoundedCornerShape(16.dp)),
+            .border(1.5.dp, Color(0x47FFFFFF), RoundedCornerShape(12.dp)),
     ) {
         when (edge) {
             TabEdge.LEFT -> Box(
