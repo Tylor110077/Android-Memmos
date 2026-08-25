@@ -126,12 +126,19 @@ class XhsCaptureService : Service() {
             override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
                 val u = request.url.toString()
                 if (XhsDomCapture.VIDEO_URL.find(u) != null) videoCandidates.add(u)
-                if (XhsDomCapture.COVER_URL.find(u) != null) coverCandidates.add(u)
+                // 封面候选同样过滤预览卡（notes_pre_post/spectrum 是分享/预览资源，不是正文封面——
+                // 视频帖 DOM 无图时用它兜底会把封面挂成预览卡 → 内容与封面错位）
+                if (XhsDomCapture.COVER_URL.find(u) != null &&
+                    !u.contains("notes_pre_post") && !u.contains("spectrum")
+                ) coverCandidates.add(u)
                 return null
             }
 
             override fun onPageFinished(view: WebView, u: String) {
-                if (u.contains("xiaohongshu.com")) webFinalUrl = u // 展开结果（含真实 noteId）作长链依据
+                if (u.contains("xiaohongshu.com")) {
+                    webFinalUrl = u // 展开结果（含真实 noteId）作长链依据
+                    android.util.Log.d("MemmosDbg", "capture final page: ${u.take(120)}")
+                }
                 if (u.contains("xiaohongshu.com") && !handled) {
                     update(0.22f, "就绪，加载评论…")
                     handler.postDelayed({ checkReady() }, 1200)
