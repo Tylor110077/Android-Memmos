@@ -378,7 +378,7 @@ private fun CapturePage(
             contentAlignment = Alignment.Center,
         ) { Text("M", color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.Bold) }
         Spacer(Modifier.height(12.dp))
-        Text("Memmos 捕捉", color = TextHi, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+        PageTitle("Memmos 捕捉")
         Text(
             "多源内容 · 一键剪藏 · 沉淀到 Obsidian",
             fontSize = 12.sp, color = TextFaint,
@@ -523,7 +523,7 @@ private fun LibraryPage(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             if (!selecting) {
-                Text("剪藏库", color = TextHi, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                PageTitle("剪藏库")
                 Spacer(Modifier.weight(1f))
                 if (clips.isNotEmpty()) {
                     Text(
@@ -812,7 +812,7 @@ private fun SettingsPage(message: String?, onMessage: (String?) -> Unit, onSync:
             Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text("设置", color = TextHi, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            PageTitle("设置")
             Spacer(Modifier.weight(1f))
             Text(
                 "多源内容沉淀 · Obsidian 同步",
@@ -1419,6 +1419,22 @@ private fun CaptureProgressCard() {
     }
 }
 
+/** 页面大标题（mckp.live 节奏）：22sp 显示级 + 品牌紫短下划线（如 "A Real Experience." 强调） */
+@Composable
+private fun PageTitle(text: String) {
+    Column {
+        Text(text, color = TextHi, fontSize = 22.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.3.sp)
+        Spacer(Modifier.height(5.dp))
+        Box(
+            Modifier
+                .width(34.dp)
+                .height(3.dp)
+                .clip(RoundedCornerShape(99.dp))
+                .background(AccentViolet),
+        )
+    }
+}
+
 @Composable
 private fun SectionLabel(text: String) {
     Text(text, fontSize = 11.sp, letterSpacing = 2.sp, color = TextFaint, modifier = Modifier.fillMaxWidth())
@@ -1478,7 +1494,7 @@ private fun ClipRow(
         } else {
             Box(
                 Modifier.size(64.dp).background(
-                    Brush.linearGradient(listOf(Color(0x2EFF2E4D), Color(0x2EFF7A45))),
+                    Brush.linearGradient(listOf(Color(0x2E8B7BFF), Color(0x2E9E8FFF))),
                     RoundedCornerShape(10.dp),
                 ),
                 contentAlignment = Alignment.Center,
