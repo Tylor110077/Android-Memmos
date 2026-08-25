@@ -54,11 +54,13 @@ fun SettingsSheet(
     opacity: Float,
     barWidth: Float,
     barLength: Float,
+    barColor: TabColor,
     onEdgeChange: (TabEdge) -> Unit,
     onFracChange: (Float) -> Unit,
     onOpacityChange: (Float) -> Unit,
     onWidthChange: (Float) -> Unit,
     onLengthChange: (Float) -> Unit,
+    onColorChange: (TabColor) -> Unit,
     onDismiss: () -> Unit,
     /** 点抽屉空白区域：整个退出悬浮窗（关抽屉+面板，浮条贴边保留，再滑开是初始面板） */
     onDismissAll: () -> Unit,
@@ -101,8 +103,8 @@ fun SettingsSheet(
             SectionLabel("贴 边 位 置（长按滑块拖动亦可）")
             Spacer(Modifier.height(10.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                // 演示示意图：只显示真实浮条（左右贴边，位置/大小实时）
-                PositionWidget(edge, frac, barWidth, barLength)
+                // 演示示意图：只显示真实浮条（左右贴边，位置/大小/配色实时）
+                PositionWidget(edge, frac, barWidth, barLength, barColor)
                 Spacer(Modifier.width(15.dp))
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             // 分段控件（模板 Mesh/Depth：黑 30% 胶囊容器 + 选中白胶囊黑字）
@@ -122,6 +124,23 @@ fun SettingsSheet(
                         fontSize = 11.sp, lineHeight = 19.sp, color = TextMid,
                     )
                 }
+            }
+            Spacer(Modifier.height(14.dp))
+            // 配色：滑块本体纯色三选一（绿/白/深灰，用户要求）
+            SectionLabel("配 色")
+            Spacer(Modifier.height(8.dp))
+            Row(
+                Modifier
+                    .clip(RoundedCornerShape(999.dp))
+                    .background(IslandFill)
+                    .border(1.dp, Color(0x26FFFFFF), RoundedCornerShape(999.dp))
+                    .padding(4.dp),
+            ) {
+                ColorChip("绿", TabColor.GREEN, barColor == TabColor.GREEN) { onColorChange(TabColor.GREEN) }
+                Spacer(Modifier.width(4.dp))
+                ColorChip("白", TabColor.WHITE, barColor == TabColor.WHITE) { onColorChange(TabColor.WHITE) }
+                Spacer(Modifier.width(4.dp))
+                ColorChip("深灰", TabColor.DARK, barColor == TabColor.DARK) { onColorChange(TabColor.DARK) }
             }
             Spacer(Modifier.height(14.dp))
             // 滑杆：左右贴边时调纵向位置一致
@@ -157,13 +176,14 @@ private fun SectionLabel(text: String) {
     Text(text, fontSize = 11.sp, letterSpacing = 1.6.sp, color = TextSoft)
 }
 
-/** 手机轮廓示意图（只保留一条真实演示条；方向切换在下方「左缘/右缘」控制） */
+/** 手机轮廓示意图（只保留一条真实演示条；方向/大小/配色实时跟随） */
 @Composable
 private fun PositionWidget(
     edge: TabEdge,
     frac: Float,
     barWidth: Float,
     barLength: Float,
+    color: TabColor,
 ) {
     val lMini = (24f + (barLength - 48f) / 102f * 88f).coerceIn(20f, 112f)
     val wMini = (3f + (barWidth - 5f) / 31f * 6f).coerceIn(3f, 9f)
@@ -177,16 +197,37 @@ private fun PositionWidget(
                 Modifier.offset(x = 0.dp, y = ((128f - lMini) * frac).dp)
                     .size(width = wMini.dp, height = lMini.dp)
                     .clip(RoundedCornerShape(999.dp))
-                    .background(AccentBrush),
+                    .background(color.body),
             )
             TabEdge.RIGHT -> Box(
                 Modifier.offset(x = (74f - wMini).dp, y = ((128f - lMini) * frac).dp)
                     .size(width = wMini.dp, height = lMini.dp)
                     .clip(RoundedCornerShape(999.dp))
-                    .background(AccentBrush),
+                    .background(color.body),
             )
             else -> {} // 只保留左右贴边
         }
+    }
+}
+
+/** 配色分段项：真实色点 + 文字（选中白胶囊黑字） */
+@Composable
+private fun ColorChip(label: String, color: TabColor, selected: Boolean, onSelect: () -> Unit) {
+    Row(
+        Modifier
+            .clip(RoundedCornerShape(999.dp))
+            .background(if (selected) Color.White else Color.Transparent)
+            .clickable { onSelect() }
+            .padding(horizontal = 12.dp, vertical = 7.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(Modifier.size(10.dp).clip(CircleShape).background(color.body))
+        Spacer(Modifier.width(6.dp))
+        Text(
+            label,
+            fontSize = 12.sp, fontWeight = FontWeight.Medium,
+            color = if (selected) Color(0xFF09090B) else TextSoft,
+        )
     }
 }
 

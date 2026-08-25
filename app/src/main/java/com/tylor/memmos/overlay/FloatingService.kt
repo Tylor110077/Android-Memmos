@@ -174,6 +174,7 @@ class FloatingService : Service() {
         val a by model.opacity
         val d by model.dragging
         val e by model.edge
+        val c by model.barColor
         // 视觉贴向屏幕边一侧，触控余量留在内侧
         val align = when (e) {
             TabEdge.LEFT -> Alignment.CenterStart
@@ -187,7 +188,7 @@ class FloatingService : Service() {
                 .size((maxOf(48f, bw + 28f)).dp, (maxOf(48f, bl + 16f)).dp),
             contentAlignment = align,
         ) {
-            EdgeTab(edge = e, barWidth = bw, barLength = bl, alpha = a, dragging = d)
+            EdgeTab(edge = e, barWidth = bw, barLength = bl, alpha = a, color = c, dragging = d)
         }
     }
 
