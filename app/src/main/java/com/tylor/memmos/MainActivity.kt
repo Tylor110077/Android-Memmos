@@ -15,6 +15,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -68,6 +69,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLifecycleOwner
@@ -245,7 +247,30 @@ fun MainTabs(sharedText: String?, clipCapture: Boolean = false) {
             containerColor = Color.Transparent,
             bottomBar = { IslandBar(tab) { tab = it } },
         ) { pad ->
-            Box(Modifier.padding(pad)) {
+            // 主页面横滑切换：空白/任意区域左右滑（≥120dp）切页——左滑下一页、右滑上一页，
+            // 与底栏岛屿同步；列表纵向滚动与点击不被抢（父级只捕获横向拖动）
+            val density = LocalDensity.current
+            val swipePx = with(density) { 120.dp.toPx() }
+            Box(
+                Modifier
+                    .padding(pad)
+                    .pointerInput(tab) {
+                        var total = 0f
+                        detectHorizontalDragGestures(
+                            onDragStart = { total = 0f },
+                            onDragEnd = {
+                                when {
+                                    total > swipePx -> tab = Tab.entries[(tab.ordinal + 2) % 3]
+                                    total < -swipePx -> tab = Tab.entries[(tab.ordinal + 1) % 3]
+                                }
+                            },
+                            onHorizontalDrag = { change, dragAmount ->
+                                total += dragAmount
+                                change.consume()
+                            },
+                        )
+                    },
+            ) {
                 when (tab) {
                     Tab.CAPTURE -> CapturePage(
                         clips = clips, busy = false, message = message,
