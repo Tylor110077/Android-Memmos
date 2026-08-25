@@ -85,16 +85,23 @@ class FloatingService : Service() {
 
     private var anim: ValueAnimator? = null
 
+    /** onChange 合并器：同一帧内多次值变化只执行一次窗口更新（快速拖滑杆每帧会有
+     *  尺寸+位置两次 updateViewLayout，高频重排=界面闪现——用户反馈慢拖无、快拖有） */
+    private val applyOnChange = Runnable {
+        applyScaleToTabWindow()
+        applyRestingPosition(animated = false)
+    }
+
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onCreate() {
         super.onCreate()
         wm = getSystemService(Context.WINDOW_SERVICE) as WindowManager
         // 位置/大小变化都走这里：重算热区尺寸（scale 影响视觉与触控）+ 停靠位置。
-        // 滑块拖动是连续变化，必须瞬时定位——220ms 窗口动画被每帧 cancel+重启会闪一下（用户反馈）
+        // 滑块拖动是连续变化，必须瞬时定位；合并到下一帧执行一次，避免每帧两次 updateViewLayout
         model.onChange = {
-            applyScaleToTabWindow()
-            applyRestingPosition(animated = false)
+            main.removeCallbacks(applyOnChange)
+            main.post(applyOnChange)
         }
     }
 
@@ -105,8 +112,11 @@ class FloatingService : Service() {
         val l = model.barLength.value
         val hotWdp = maxOf(48f, w + 28f)
         val hotHdp = maxOf(48f, l + 16f)
-        tabLp.width = dp(hotWdp).roundToInt()
-        tabLp.height = dp(hotHdp).roundToInt()
+        val newW = dp(hotWdp).roundToInt()
+        val newH = dp(hotHdp).roundToInt()
+        if (tabLp.width == newW && tabLp.height == newH) return // 尺寸没变跳过，减少无谓重排
+        tabLp.width = newW
+        tabLp.height = newH
         runCatching { wm.updateViewLayout(tabView, tabLp) }
     }
 
@@ -216,6 +226,7 @@ class FloatingService : Service() {
     private fun animateTabTo(tx: Int, ty: Int, animated: Boolean) {
         if (tabView == null) return
         if (!animated) {
+            if (tabLp.x == tx && tabLp.y == ty) return // 位置没变跳过
             tabLp.x = tx; tabLp.y = ty
             wm.updateViewLayout(tabView, tabLp)
             return
