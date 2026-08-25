@@ -46,6 +46,9 @@ fun EdgeTab(
         TabEdge.TOP -> RoundedCornerShape(topStart = rEdge, topEnd = rEdge, bottomEnd = rOuter, bottomStart = rOuter)
         TabEdge.BOTTOM -> RoundedCornerShape(topStart = rOuter, topEnd = rOuter, bottomEnd = rEdge, bottomStart = rEdge)
     }
+    // 玻璃实度：不透明度滑块 0.4→1.0 映射到「填充透明度」0.18→1.0——
+    // 只靠图层透明度时上限也是半透玻璃，用户要求最不透明状态=完全不透明（纯白实心）
+    val s = ((alpha - 0.4f) / 0.6f).coerceIn(0f, 1f)
     Box(
         modifier
             .graphicsLayer { this.alpha = alpha }
@@ -57,12 +60,12 @@ fun EdgeTab(
             .background(
                 Brush.verticalGradient(
                     listOf(
-                        if (dragging) Color(0x3DFFFFFF) else Color(0x2EFFFFFF), // 白 .24 / .18
-                        if (dragging) Color(0x1FFFFFFF) else Color(0x14FFFFFF), // 白 .12 / .08
+                        Color.White.copy(alpha = (if (dragging) 0.24f else 0.18f) + (1f - (if (dragging) 0.24f else 0.18f)) * s),
+                        Color.White.copy(alpha = (if (dragging) 0.12f else 0.08f) + (1f - (if (dragging) 0.12f else 0.08f)) * s),
                     ),
                 ),
                 shape,
             )
-            .border(0.5.dp, Color(0x38FFFFFF), shape),
+            .border(0.5.dp, Color.White.copy(alpha = 0.22f + 0.78f * s), shape),
     )
 }

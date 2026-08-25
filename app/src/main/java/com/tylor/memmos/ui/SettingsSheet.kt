@@ -140,12 +140,12 @@ fun SettingsSheet(
                 label = "贴边位置",
                 value = frac, valueText = "${(frac * 100).toInt()}%",
             ) { onFracChange(it) }
-            // 宽/长独立（用户要求：浮条同时设定宽度和长度）
+            // 宽/长独立（用户要求：浮条同时设定宽度和长度）；范围 8-36dp——可更细、上限不变
             SliderRow(
                 label = "宽度",
-                value = (barWidth - 12f) / 24f,
+                value = (barWidth - 8f) / 28f,
                 valueText = "${barWidth.toInt()}dp",
-            ) { onWidthChange(12f + it * 24f) }
+            ) { onWidthChange(8f + it * 28f) }
             SliderRow(
                 label = "长度",
                 value = (barLength - 48f) / 102f,
@@ -177,7 +177,7 @@ private fun PositionWidget(
     barLength: Float,
 ) {
     val lMini = (24f + (barLength - 48f) / 102f * 88f).coerceIn(20f, 112f)
-    val wMini = (3f + (barWidth - 12f) / 24f * 6f).coerceIn(3f, 9f)
+    val wMini = (3f + (barWidth - 8f) / 28f * 6f).coerceIn(3f, 9f)
     Box(
         Modifier
             .size(width = 74.dp, height = 128.dp)
