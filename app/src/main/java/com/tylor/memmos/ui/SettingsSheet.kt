@@ -32,6 +32,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -176,7 +177,8 @@ private fun SectionLabel(text: String) {
     Text(text, fontSize = 11.sp, letterSpacing = 1.6.sp, color = TextSoft)
 }
 
-/** 手机轮廓示意图（只保留一条真实演示条；方向/大小/配色实时跟随） */
+/** 手机轮廓示意图（只保留一条真实演示条；方向/大小/配色实时跟随）。
+ *  尺寸按真实屏幕宽高比与真实值等比：长度 = barLength/屏高×框高、宽度 = barWidth/屏宽×框宽。 */
 @Composable
 private fun PositionWidget(
     edge: TabEdge,
@@ -185,22 +187,27 @@ private fun PositionWidget(
     barLength: Float,
     color: TabColor,
 ) {
-    val lMini = (24f + (barLength - 48f) / 102f * 88f).coerceIn(20f, 112f)
-    val wMini = (3f + (barWidth - 5f) / 31f * 6f).coerceIn(3f, 9f)
+    val cfg = LocalConfiguration.current
+    val sw = cfg.screenWidthDp.toFloat()
+    val sh = cfg.screenHeightDp.toFloat()
+    val frameH = 128f
+    val frameW = frameH * (sw / sh) // 真实竖屏比例（如 390×844 → 约 59×128）
+    val lMini = (barLength / sh * frameH).coerceIn(3f, frameH - 2f)
+    val wMini = (barWidth / sw * frameW).coerceAtLeast(1.5f)
     Box(
         Modifier
-            .size(width = 74.dp, height = 128.dp)
+            .size(width = frameW.dp, height = frameH.dp)
             .border(1.5.dp, Color(0x47FFFFFF), RoundedCornerShape(12.dp)),
     ) {
         when (edge) {
             TabEdge.LEFT -> Box(
-                Modifier.offset(x = 0.dp, y = ((128f - lMini) * frac).dp)
+                Modifier.offset(x = 0.dp, y = ((frameH - lMini) * frac).dp)
                     .size(width = wMini.dp, height = lMini.dp)
                     .clip(RoundedCornerShape(999.dp))
                     .background(color.body),
             )
             TabEdge.RIGHT -> Box(
-                Modifier.offset(x = (74f - wMini).dp, y = ((128f - lMini) * frac).dp)
+                Modifier.offset(x = (frameW - wMini).dp, y = ((frameH - lMini) * frac).dp)
                     .size(width = wMini.dp, height = lMini.dp)
                     .clip(RoundedCornerShape(999.dp))
                     .background(color.body),
