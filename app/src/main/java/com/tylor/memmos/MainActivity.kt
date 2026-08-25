@@ -1284,7 +1284,7 @@ private fun SettingsPage(message: String?, onMessage: (String?) -> Unit, onSync:
                         },
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text(if (syncing) "同步中…" else "立即同步", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                    Text(if (syncing) "同步中…" else "立即同步", color = BtnPrimaryText, fontSize = 15.sp, fontWeight = FontWeight.Bold)
                 }
                 Box(
                     Modifier
