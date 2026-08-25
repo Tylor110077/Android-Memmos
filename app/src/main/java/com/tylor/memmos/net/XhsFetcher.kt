@@ -51,9 +51,12 @@ object XhsFetcher {
      * 字符串内转义感知，遇到 } 配平即收——不依赖 </script> 边界。
      * 旧实现 (.*?)</script> 在登录态页面变体上会把 JSON 从字符串中间切断（实测）。
      */
-    /** 字符串感知的方括号配平：从 JSON 文本中按 key 提取首个数组原文（绕过整段解析失败） */
-    private fun extractJsonArrayRaw(text: String, key: String): String {
-        val k = text.indexOf("\"$key\"")
+    /** 字符串感知的方括号配平：从 JSON 文本中按 key 提取数组原文（绕过整段解析失败）。
+     *  从 fromKey 之后开始找——避免命中推荐流里同名字段（imageList 在推荐数据里也存在，
+     *  取第一个会拿到"别的帖子的图"，正是图序错乱来源） */
+    private fun extractJsonArrayRaw(text: String, key: String, fromKey: String? = null): String {
+        val from = if (fromKey != null) text.indexOf("\"$fromKey\"").let { if (it < 0) 0 else it } else 0
+        val k = text.indexOf("\"$key\"", from)
         if (k < 0) return ""
         val start = text.indexOf('[', k)
         if (start < 0) return ""
@@ -190,7 +193,7 @@ object XhsFetcher {
         // —— 图集顺序以 imageList 为准（DOM 轮播预加载顺序是 2..10,1，会造成"首尾错位"）
         val stateForImages = stateJson ?: ""
         val fallbackImgs = if (noteObj == null) runCatching {
-            val raw = extractJsonArrayRaw(stateForImages, "imageList")
+            val raw = extractJsonArrayRaw(stateForImages, "imageList", fromKey = "noteDetailMap")
             if (raw.isBlank()) emptyList()
             else JSONArray(raw).let { a ->
                 List(a.length()) { i ->
@@ -200,7 +203,9 @@ object XhsFetcher {
                         ?: ""
                 }.filter { it.isNotEmpty() }
             }
-        }.getOrDefault(emptyList()) else emptyList()
+        }.getOrDefault(emptyList())
+            .also { if (it.isNotEmpty()) android.util.Log.d("MemmosDbg", "imgList fallback: n=${it.size} first=${it.first().substringAfterLast('/').take(20)}") }
+        } else emptyList()
 
         if (noteObj == null) {
             val descFallback = Regex("""<div id="detail-desc" class="desc">([\s\S]*?)</div>""").find(html)
