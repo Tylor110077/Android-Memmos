@@ -18,10 +18,8 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -107,7 +105,10 @@ fun SettingsSheet(
         }
         Spacer(Modifier.height(16.dp))
 
-        Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
+        // 内容不滚动：整块抽屉都是下滑收起拖拽区——若内部有 scroll 会先消费手势，
+        // 滑杆区/下方区域就拖不动（用户要求「滑动下面部分也能收起」）。
+        // 设置行数固定（4 滑杆 + 位置示意），真机高度富余；未来若增加行数需改为十字手势。
+        Column(Modifier.weight(1f)) {
             SectionLabel("贴 边 位 置（长按滑块拖动亦可）")
             Spacer(Modifier.height(10.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {

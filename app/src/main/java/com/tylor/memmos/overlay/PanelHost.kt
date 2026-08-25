@@ -127,7 +127,8 @@ fun PanelHost(
                         state = rememberDraggableState { d -> sheetDrag = (sheetDrag + d).coerceAtLeast(0f) },
                         orientation = Orientation.Vertical,
                         onDragStopped = { v ->
-                            val threshold = with(density) { 140.dp.toPx() }
+                            // 短滑即收（用户要求滑动距离短）：56dp 位移或 900px/s 甩动
+                            val threshold = with(density) { 56.dp.toPx() }
                             if (sheetDrag > threshold || v > 900f) model.sheetOpen.value = false
                             sheetDrag = 0f
                         },
