@@ -380,7 +380,7 @@ private fun CapturePage(
         Spacer(Modifier.height(12.dp))
         PageTitle("Memmos 捕捉")
         Text(
-            "多源内容 · 一键剪藏 · 沉淀到 Obsidian",
+            "悬浮窗速抓 · 剪藏库 · Obsidian 双向同步",
             fontSize = 12.sp, color = TextFaint,
             modifier = Modifier.padding(top = 6.dp, bottom = 10.dp),
         )
@@ -1332,27 +1332,14 @@ private fun SettingsPage(message: String?, onMessage: (String?) -> Unit, onSync:
 
         SectionLabel("关于")
         Spacer(Modifier.height(8.dp))
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(28.dp)) {
-            Column(Modifier.weight(1f)) {
-                Text("产品", fontSize = 10.5.sp, color = TextFaint)
-                Text("Memmos 捕捉", fontSize = 11.sp, color = TextHi, modifier = Modifier.padding(top = 6.dp))
-                Text("多源内容沉淀 · Obsidian 同步", fontSize = 10.5.sp, color = TextFaint, modifier = Modifier.padding(top = 3.dp))
-            }
-            Column(Modifier.weight(1f)) {
-                Text("能力", fontSize = 10.5.sp, color = TextFaint)
-                Text("悬浮窗速抓 · 评论全量", fontSize = 11.sp, color = TextHi, modifier = Modifier.padding(top = 6.dp))
-                Text("视频封面 · 双向同步", fontSize = 10.5.sp, color = TextFaint, modifier = Modifier.padding(top = 3.dp))
-            }
-            Column(Modifier.weight(1f)) {
-                Text("当前源", fontSize = 10.5.sp, color = TextFaint)
-                Text("小红书", fontSize = 11.sp, color = TextHi, modifier = Modifier.padding(top = 6.dp))
-                Text("更多源规划中", fontSize = 10.5.sp, color = TextFaint, modifier = Modifier.padding(top = 3.dp))
-            }
-        }
         Text(
-            "© 2026 Memmos · make capture effortless",
+            "Memmos · 悬浮窗速抓 + 剪藏库 + Obsidian 双向同步（当前支持小红书）",
+            fontSize = 11.sp, lineHeight = 17.sp, color = TextFaint,
+        )
+        Text(
+            "© 2026 Memmos",
             fontSize = 10.sp, color = TextFaint,
-            modifier = Modifier.fillMaxWidth().padding(top = 14.dp),
+            modifier = Modifier.padding(top = 8.dp),
         )
         Spacer(Modifier.height(30.dp))
     }
