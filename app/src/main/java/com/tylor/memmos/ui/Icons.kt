@@ -128,15 +128,15 @@ fun IconVolumeSpeaker(size: Dp, tint: Color, modifier: Modifier = Modifier) = Gl
 /** 设置齿轮：6 齿细弧 + 中环 + 中孔，占满 24 视口（与靶心/四宫格同视觉重量） */
 @Composable
 fun IconGear(size: Dp, tint: Color, modifier: Modifier = Modifier) = GlyphIcon(size, tint, modifier, strokeWidth = 1.6f) { _ ->
-    val tooth = Stroke(width = 2.9f, cap = StrokeCap.Butt)
+    val tooth = Stroke(width = 3.2f, cap = StrokeCap.Butt)
     for (a in 0 until 360 step 60) {
         drawArc(
-            tint, startAngle = (a - 10f), sweepAngle = 20f, useCenter = false,
-            topLeft = Offset(3.4f, 3.4f), size = Size(17.2f, 17.2f), style = tooth,
+            tint, startAngle = (a - 11f), sweepAngle = 22f, useCenter = false,
+            topLeft = Offset(2.6f, 2.6f), size = Size(18.8f, 18.8f), style = tooth,
         )
     }
-    drawCircle(tint, radius = 5.9f, center = Offset(12f, 12f), style = Stroke(width = 2.1f, cap = StrokeCap.Butt))
-    drawCircle(tint, radius = 2.4f, center = Offset(12f, 12f), style = Stroke(width = 1.6f, cap = StrokeCap.Butt))
+    drawCircle(tint, radius = 6.4f, center = Offset(12f, 12f), style = Stroke(width = 2.2f, cap = StrokeCap.Butt))
+    drawCircle(tint, radius = 2.7f, center = Offset(12f, 12f), style = Stroke(width = 1.7f, cap = StrokeCap.Butt))
 }
 
 @Composable
