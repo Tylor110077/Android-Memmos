@@ -132,6 +132,10 @@ object XhsFetcher {
             error("分享链接已失效：请在内侧「复制链接」获取原贴完整链接后再抓取")
         }
 
+        android.util.Log.d(
+            "MemmosDbg",
+            "fetch page: url=${finalUrl.take(60)} len=${html.length} hasState=${extractInitialState(html)?.let { it.length }}",
+        )
         // 页面里 JSON 字符串可能含 </script> 字面量（实测登录态页面变体在 50731 字符处截断），
         // 「.*?</script>」懒惰匹配会从字符串中间切开——改用花括号配平提取（字符串感知）
         val stateJson = extractInitialState(html)

@@ -54,7 +54,7 @@ object XhsDomCapture {
   var avatarEl = q('.author-container img')||q('.avatar-item img')||q('img.avatar');
   var avatar = avatarEl?avatarEl.src:'';
   var tags = qa('.tag, .note-tag, #detail-desc a.tag').map(function(x){return x.textContent.trim().replace(/^#/,'')}).filter(function(x){return x&&x.length<30});
-  var images = qa('.media-container img, .note-slider img, .swiper-slide img, .img-container img').map(function(i){return i.src}).filter(function(s){return s&&s.startsWith('http')&&s.indexOf('avatar')===-1&&s.indexOf('spectrum')===-1&&s.indexOf('notes_pre_post')===-1});
+  var images = qa('.media-container img, .note-slider img, .swiper-slide img, .img-container img').map(function(i){return i.src}).filter(function(s){return s&&s.startsWith('http')&&s.indexOf('avatar')===-1&&s.indexOf('notes_pre_post')===-1});
   var vEl = q('video source')||q('video');
   var video = vEl?(vEl.currentSrc||vEl.src||vEl.getAttribute('src')):'';
   if(!video||video.indexOf('blob:')===0){
@@ -74,7 +74,7 @@ object XhsDomCapture {
   var wp = [];
   try{
     wp=(performance.getEntriesByType('resource')||[]).map(function(r){return r.name||''})
-      .filter(function(n){return /sns-webpic/i.test(n) && n.indexOf('avatar')===-1 && n.indexOf('notes_pre_post')===-1 && n.indexOf('spectrum')===-1});
+      .filter(function(n){return /sns-webpic/i.test(n) && n.indexOf('avatar')===-1 && n.indexOf('notes_pre_post')===-1});
   }catch(e){}
   if (!images.length && wp.length) images.push(wp[0]);
   // 兜底二：og:image 封面（页面 meta，与正文封面一致），并单独透出给合并层
