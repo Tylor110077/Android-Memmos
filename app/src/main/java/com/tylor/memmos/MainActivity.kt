@@ -199,6 +199,11 @@ fun MainTabs(clipCapture: Boolean = false) {
         }
     }
 
+    // 同步完成（progress 归 null）自动刷新剪藏库——不用重开应用（用户反馈）
+    LaunchedEffect(SyncEngine.progress.value) {
+        if (SyncEngine.progress.value == null) reload()
+    }
+
     // 从设置/详情返回时刷新权限与列表
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
@@ -657,54 +662,6 @@ private fun LibraryPage(
             }
         }
 
-    }
-
-    // 同步的文件（filesDir/vault 下的非 md 附件，如 pdf/docx/图片）
-    val vaultFiles = remember(clips) {
-        val dir = java.io.File(ctx.filesDir, "vault")
-        if (!dir.exists()) emptyList()
-        else dir.walkTopDown().filter { it.isFile && it.extension.lowercase() != "md" }
-            .sortedByDescending { it.lastModified() }.toList()
-    }
-    if (vaultFiles.isNotEmpty() && !selecting) {
-        Text(
-            "同步的文件（${vaultFiles.size}）",
-            fontSize = 12.sp, color = TextFaint,
-            modifier = Modifier.padding(horizontal = 22.dp, vertical = 6.dp),
-        )
-        vaultFiles.take(20).forEach { f ->
-            val rel = f.absolutePath.removePrefix("${java.io.File(ctx.filesDir, "vault").absolutePath}/")
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 4.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(GlassFill)
-                    .border(1.dp, GlassStrokeSoft, RoundedCornerShape(12.dp))
-                    .clickable {
-                        ctx.startActivity(
-                            Intent(ctx, com.tylor.memmos.ui.viewer.FileViewerActivity::class.java)
-                                .putExtra("path", rel),
-                        )
-                    }
-                    .padding(horizontal = 12.dp, vertical = 9.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Box(
-                    Modifier.size(30.dp).background(
-                        Color(0x2EFFFFFF), RoundedCornerShape(9.dp),
-                    ),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(fileBadge(f.extension), fontSize = 13.sp, color = Color(0xFF6EE7B7))
-                }
-                Spacer(Modifier.width(10.dp))
-                Column(Modifier.weight(1f)) {
-                    Text(f.name, fontSize = 13.sp, color = TextHi, maxLines = 1)
-                    Text("${ClipStore.fmtSize(f.length())} · 点击打开", fontSize = 10.sp, color = TextFaint)
-                }
-            }
-        }
     }
 
     // 多选底部：单个操作条，点击弹出菜单（避免与顶部全选/完成视觉重复）
@@ -1335,9 +1292,11 @@ private fun SettingsPage(message: String?, onMessage: (String?) -> Unit, onSync:
             }
         }
 
-        // 同步进度条（用户要求）：上传/下载阶段 + 进度 + 完成态
+        // 同步进度条（用户要求）：上传/下载阶段 + 进度 + 完成态；
+        // 完成后结果消息显示在同一位置（用户要求：同步消息放到进度显示位置）
         val syncProg by SyncEngine.progress.collectAsState()
-        syncProg?.let { p ->
+        val syncMsg by SyncEngine.lastSyncMsg.collectAsState()
+        if (syncProg != null || syncMsg != null) {
             Spacer(Modifier.height(10.dp))
             Column(
                 Modifier.fillMaxWidth().padding(horizontal = 2.dp),
@@ -1345,17 +1304,24 @@ private fun SettingsPage(message: String?, onMessage: (String?) -> Unit, onSync:
             ) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        "${p.phase}", fontSize = 11.sp, color = TextMid,
+                        syncProg?.phase ?: "同步结果", fontSize = 11.sp, color = TextMid,
                         modifier = Modifier.weight(1f),
                     )
-                    Text("${p.done} / ${p.total}", fontSize = 11.sp, color = TextFaint)
+                    if (syncProg != null) Text("${syncProg!!.done} / ${syncProg!!.total}", fontSize = 11.sp, color = TextFaint)
                 }
-                LinearProgressIndicator(
-                    progress = { p.fraction },
-                    modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(99.dp)),
-                    color = AccentGreen,
-                    trackColor = Color(0x33FFFFFF),
-                )
+                if (syncProg != null) {
+                    LinearProgressIndicator(
+                        progress = { syncProg!!.fraction },
+                        modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(99.dp)),
+                        color = AccentGreen,
+                        trackColor = Color(0x33FFFFFF),
+                    )
+                } else {
+                    Text(
+                        syncMsg.orEmpty(),
+                        fontSize = 11.sp, color = TextSoft, lineHeight = 17.sp,
+                    )
+                }
             }
         }
 

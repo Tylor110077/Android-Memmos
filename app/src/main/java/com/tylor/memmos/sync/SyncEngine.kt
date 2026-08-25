@@ -2,6 +2,7 @@ package com.tylor.memmos.sync
 
 import android.content.Context
 import android.util.Base64
+import com.tylor.memmos.data.ClipComment
 import com.tylor.memmos.data.ClipNote
 import com.tylor.memmos.data.ClipStore
 import com.tylor.memmos.net.MediaDownloader
@@ -51,11 +52,17 @@ object SyncEngine {
         val base = fromMarkdown(path, md, authorOverride, avatarOverride)
         val vaultDir = java.io.File(ctx.filesDir, "vault")
         val mdDir = path.substringBeforeLast('/')
-        fun localOf(rel: String) = java.io.File(vaultDir, "$mdDir/$rel").canonicalFile.absolutePath
+        fun localUri(rel: String) = "file://" + java.io.File(vaultDir, "$mdDir/$rel").canonicalFile.absolutePath
+        fun localPath(rel: String) = java.io.File(vaultDir, "$mdDir/$rel").canonicalFile.absolutePath
+        // 图片：本地 media 引用（file:// uri，Coil 才能显示）+ 远程直链（Cover/Image 任意 alt 都算）
         val imgRefs = Regex("""!\[[^\]]*\]\(((?:\.\./)*media/[^)]+)\)""").findAll(md)
-            .map { localOf(it.groupValues[1]) }.toList()
-        val vidRel = Regex("""src="((?:\.\./)*media/[^"]+)"""").find(md)?.groupValues?.get(1)
-        val localVid = vidRel?.let { localOf(it) }
+            .map { localUri(it.groupValues[1]) }.toList()
+        val remoteImgs = Regex("""!\[[^\]]*\]\((https?://[^)]+)\)""").findAll(md)
+            .map { it.groupValues[1] }.toList()
+        // 视频：<video src> —— 本地 media 引用 → 文件路径；http → videoUrl（远程直链）
+        val src = Regex("""<video[^>]*src="([^"]+)"""").find(md)?.groupValues?.get(1)
+        val localVid = src?.takeIf { it.contains("media/") && !it.startsWith("http") }?.let { localPath(it) }
+        val videoUrl = src?.takeIf { it.startsWith("http") } ?: base.videoUrl
         val clipped = Regex("""^clippedAt:\s*(.+)$""", RegexOption.MULTILINE).find(md)?.groupValues?.get(1)?.trim()
         val clippedAt = runCatching {
             SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.CHINA).parse(clipped.orEmpty()).time
@@ -63,14 +70,53 @@ object SyncEngine {
         return base.copy(
             id = postId,
             origin = "xhs",
-            imageUrls = (imgRefs + base.imageUrls).distinct(),
-            type = if (localVid != null) "video" else base.type,
-            videoUrl = if (localVid != null) null else base.videoUrl,
+            desc = extractPureBody(md), // 反解：只留原正文（剥图片行/video/评论/tags，防「文字变链接」）
+            imageUrls = (imgRefs + remoteImgs).distinct().ifEmpty { base.imageUrls },
+            type = if (src != null) "video" else base.type,
+            videoUrl = if (localVid != null) null else videoUrl,
             localVideoPath = localVid,
+            comments = extractComments(md),
             clippedAt = clippedAt,
             originPath = path,
             rawMd = md,
         )
+    }
+
+    /** toMarkdown 正文反解：去掉图片行 / <video> 标签 / tags 代码块 / 「## 评论」区块，还原纯正文 */
+    private fun extractPureBody(md: String): String {
+        val fm = Regex("""^---\n([\s\S]*?)\n---\n?""").find(md)
+        var body = if (fm != null) md.substring(fm.range.last + 1) else md
+        body = body.replace(Regex("""!\[[^\]]*\]\([^)]*\)"""), "")
+        body = body.replace(Regex("""<video[^>]*>\s*</video>"""), "")
+        body = body.replace(Regex("""```[\s\S]*?```"""), "")
+        body = body.replace(Regex("""^#+\s+[^\n]*$""", RegexOption.MULTILINE), "") // 去掉 md 标题行（正文里保留）
+        body = body.replace(Regex("""## 评论[\s\S]*$"""), "")
+        return body.replace(Regex("""\n{3,}"""), "\n\n").trim()
+    }
+
+    /** 评论反解（toMarkdown 布局：`- **昵称**：内容（♥N）` / `  - **昵称**：内容` 楼中楼） */
+    private fun extractComments(md: String): List<ClipComment> {
+        val block = md.substringAfter("## 评论", "")
+        if (block.isBlank()) return emptyList()
+        val out = mutableListOf<ClipComment>()
+        var cur: ClipComment? = null
+        val re = Regex("""^\s{0,2}- \*\*(.+?)\*\*：?(.*)$""")
+        block.lines().forEach { line ->
+            val m = re.find(line) ?: return@forEach
+            val nickname = m.groupValues[1].trim()
+            val content = m.groupValues[2].trim()
+                .replace(Regex("""（♥\d+）$"""), "").trim()
+            if (line.startsWith("  -")) {
+                cur?.let { c ->
+                    val idx = out.indexOf(c)
+                    if (idx >= 0) out[idx] = c.copy(subComments = c.subComments + ClipComment(nickname, "", content, 0))
+                }
+            } else {
+                cur = ClipComment(nickname, "", content, 0)
+                out += cur!!
+            }
+        }
+        return out
     }
 
     /** 同步根目录：用户要求固定进 Memmos graph（子文件夹按分类自动创建，无需预建） */
@@ -188,6 +234,9 @@ object SyncEngine {
     }
 
     val progress = MutableStateFlow<SyncProgress?>(null)
+
+    /** 最近一次同步结果消息（显示在进度条位置；null=还没有同步过） */
+    val lastSyncMsg = MutableStateFlow<String?>(null)
 
     private fun sha16(s: String): String =
         MessageDigest.getInstance("SHA-256").digest(s.toByteArray()).joinToString("") { "%02x".format(it) }.take(16)
@@ -319,10 +368,18 @@ object SyncEngine {
             // 先取内容：帖子需解析 memmos-id 判重（手机缺失 → 重组为帖子；已有 → 跳过防重复）
             val md = runCatching { client.getFile(path) }.getOrNull() ?: continue
             if (sha16(md) != item.sha256) continue // 内容变动中，跳过保一致
-            val ex = local.firstOrNull { it.originPath == path }
-            if (ex != null && sha16(ex.rawMd.orEmpty()) == item.sha256) continue // 一致跳过
             val postId = POST_ID_RE.find(md)?.groupValues?.get(1)
-            if (postId != null && local.any { it.id == postId && it.origin != "vault" }) continue // 已有同帖
+            val ex = local.firstOrNull { it.originPath == path }
+            // 旧版重组产物（desc 里残留图片/视频语法）强制重下：round-trip 升级后刷新为干净格式
+            val staleRebuild = postId != null && ex != null && (
+                ex.desc.contains("![") || ex.desc.contains("<video") ||
+                    ex.imageUrls.any { it.startsWith("/data") || it.startsWith("/storage") } || // 裸路径封面
+                    ex.imageUrls.any { // file:// 引用但本地媒体缺失（旧版服务器路径含 .. 下载失败）
+                        it.startsWith("file://") && !java.io.File(it.removePrefix("file://")).exists()
+                    }
+                )
+            if (ex != null && sha16(ex.rawMd.orEmpty()) == item.sha256 && !staleRebuild) continue // 一致跳过
+            if (postId != null && local.any { it.id == postId && it.origin != "vault" } && !staleRebuild) continue // 已有同帖
             doneD++
             progress.value = SyncProgress("下载到手机", doneD.coerceAtMost(needDown), needDown)
             android.util.Log.d("MemmosDbg", if (postId != null) "down post: $path id=$postId" else "down md: $path")
@@ -342,14 +399,16 @@ object SyncEngine {
                 // 支持 ../media/（分类子目录引用根级 media，同 XHS Notes 结构）
                 val mdDir = path.substringBeforeLast('/')
                 val mediaRefs = mutableSetOf<String>()
-                Regex("""\(((?:\.\./)*)media/[^)]+\)""").findAll(md).forEach { mediaRefs += it.value.trim('(', ')') }
-                Regex("""!\[\[((?:\.\./)*)media/[^\]]+)\]\]""").findAll(md).forEach { mediaRefs += it.groupValues[1] }
-                Regex("""src="((?:\.\./)*)media/[^"]+)"""").findAll(md).forEach { mediaRefs += it.groupValues[1] }
+                Regex("""\(((?:\.\./)*media/[^)]+)\)""").findAll(md).forEach { mediaRefs += it.value.trim('(', ')') }
+                Regex("""!\[\[((?:\.\./)*media/[^\]]+)\]\]""").findAll(md).forEach { mediaRefs += it.groupValues[1] }
+                Regex("""src="((?:\.\./)*media/[^"]+)"""").findAll(md).forEach { mediaRefs += it.groupValues[1] }
                 mediaRefs.forEach { rel ->
                     // canonicalFile：解析 ../media/ 相对引用到真实路径（旧版含 ".." 的路径 mkdirs 会失败）
                     val target = java.io.File(vaultDir, "$mdDir/$rel").canonicalFile
                     if (target.exists()) return@forEach
-                    val b64 = runCatching { client.getBinary("$mdDir/$rel") }.getOrDefault("")
+                    // 服务器端路径同样归一 "../"（服务端不支持 .. —— 旧版媒体全部下载失败/封面灰）
+                    val serverPath = java.io.File("$mdDir/$rel").canonicalPath
+                    val b64 = runCatching { client.getBinary(serverPath) }.getOrDefault("")
                     if (b64.isNotBlank()) {
                         target.parentFile?.mkdirs()
                         target.writeBytes(Base64.decode(b64, Base64.NO_WRAP))
@@ -374,6 +433,11 @@ object SyncEngine {
         }
         local.removeAll(dupes)
         if (dupes.isNotEmpty()) android.util.Log.d("MemmosDbg", "清理帖子 vault 重复条目 ${dupes.size} 条")
+        lastSyncMsg.value = when {
+            up == 0 && down == 0 ->
+                "两端已一致：没有需要同步的内容（上传 0 · 下载 0 · 已是最新 $skip）"
+            else -> "同步完成：上传 $up · 下载 $down · 已是最新 $skip"
+        }
         progress.value = null
         store.save(local)
         return@withContext Result(up, down, skip)
