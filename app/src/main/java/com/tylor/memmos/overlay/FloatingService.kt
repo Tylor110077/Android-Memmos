@@ -188,7 +188,10 @@ class FloatingService : Service() {
                 .size((maxOf(48f, bw + 28f)).dp, (maxOf(48f, bl + 16f)).dp),
             contentAlignment = align,
         ) {
-            EdgeTab(edge = e, barWidth = bw, barLength = bl, alpha = a, color = c, dragging = d)
+            EdgeTab(
+                edge = e, barWidth = bw, barLength = bl, alpha = a, color = c, dragging = d,
+                active = panelView != null, // 面板开着时浮条全透明可见，静止态更低调
+            )
         }
     }
 

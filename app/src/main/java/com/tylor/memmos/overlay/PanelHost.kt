@@ -132,6 +132,9 @@ fun PanelHost(
             val closePx = with(density) { 56.dp.toPx() }
             Box(
                 Modifier
+                    // 贴底抽屉：0.84 高从底部对齐（自管理动画后不再有 align(Center) 垂直居中；
+                    // 默认 TopStart 会顶到屏幕顶——用户反馈）
+                    .align(if (panelOnLeft) Alignment.BottomStart else Alignment.BottomEnd)
                     .fillMaxWidth(0.86f)
                     .offset { IntOffset(0, sheetAnim.value.roundToInt()) }
                     .draggable(

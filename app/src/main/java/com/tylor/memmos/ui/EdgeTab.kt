@@ -40,15 +40,18 @@ fun EdgeTab(
     alpha: Float,
     color: TabColor,
     dragging: Boolean,
+    /** 面板打开/被拖拽时全透明可见；静止态乘 0.55 更低调（用户要求触发器存在更不明显） */
+    active: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     val w = barWidth
     val h = barLength
     // 柱状胶囊：头尾全圆（用户要求「头尾为类似圆形」）
     val shape = RoundedCornerShape(999.dp)
+    val eff = (alpha * (if (dragging || active) 1f else 0.55f)).coerceIn(0f, 1f)
     Box(
         modifier
-            .graphicsLayer { this.alpha = alpha }
+            .graphicsLayer { this.alpha = eff }
             // 滑块可视区排除系统返回手势：向屏幕内滑的手势让给面板打开（API 29+，低版本无手势导航）
             .systemGestureExclusion()
             .size(w.dp, h.dp)
