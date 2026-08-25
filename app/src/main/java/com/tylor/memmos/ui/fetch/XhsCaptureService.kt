@@ -292,7 +292,13 @@ class XhsCaptureService : Service() {
                 // DOM/网络拦截只在权威链缺失（变体页）时兜底，且兜底前过滤预览卡（页面上已滤）。
                 // 图片优先级：① __INITIAL_STATE__ 权威链 ② og:image（=本文封面，页面 meta）
                 //   ③ DOM 收集（桌面版有"相关推荐"图风险）④ 网络拦截（已滤预览卡）
-                imageUrls = (httpNote?.imageUrls.orEmpty().takeIf { it.isNotEmpty() } ?: run {
+                imageUrls = (httpNote?.imageUrls.orEmpty().takeIf { it.isNotEmpty() }?.let { list ->
+                    // 封面校正：DOM 第一张 img=封面（可靠），把提取列表旋转到该元素开头——
+                    // 若提取顺序是"2..10,1"式，旋转后即 1..10，且不影响后续顺序
+                    val domCover = domNote.imageUrls.firstOrNull { isNoteImage(it) }
+                    val at = list.indexOf(domCover)
+                    if (at > 0) listOf(list[at]) + list.filterIndexed { i, _ -> i != at } else list
+                } ?: run {
                     // httpNote 缺失（极端变体）才允许 og/DOM/拦截兜底；权威链存在时图片只从它来，
                     // 顺序=imageList 原帖顺序（DOM 顺序 2..10,1 是错位根源，禁止混入）
                     val og = ogImage?.takeIf { isNoteImage(it) }
