@@ -40,7 +40,6 @@ import androidx.compose.ui.platform.LocalContext
 import coil.compose.AsyncImage
 import com.tylor.memmos.data.ClipStore
 import com.tylor.memmos.sync.SyncPrefs
-import com.tylor.memmos.ui.components.GlassCircleButton
 import com.tylor.memmos.ui.components.VisionRowCard
 import com.tylor.memmos.ui.fetch.XhsCaptureService
 import com.tylor.memmos.ui.theme.BtnPrimaryBg
@@ -63,7 +62,6 @@ import com.tylor.memmos.ui.theme.TextSoft
  */
 @Composable
 fun CapturePanel(
-    onClose: () -> Unit,
     onOpenSettings: () -> Unit,
     onCaptureCurrent: () -> Unit,
     onOpenNote: (String) -> Unit,
@@ -98,12 +96,6 @@ fun CapturePanel(
                 Spacer(Modifier.weight(1f))
                 Spacer(Modifier.width(10.dp)) // 配对 chip 与标题文本的最小间距（用户反馈太近）
                 PairedChip(paired)
-                Spacer(Modifier.width(10.dp))
-                GlassCircleButton(
-                    size = 42.dp,
-                    content = { IconClose(22.dp, Color.White) },
-                    onClick = { onClose() },
-                )
             }
             Spacer(Modifier.height(12.dp))
             // 「浮条设置」把手（用户要求删齿轮按钮）：在最近剪藏上方一条，向下滑展开设置抽屉

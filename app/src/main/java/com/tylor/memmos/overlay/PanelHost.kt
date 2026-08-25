@@ -93,7 +93,6 @@ fun PanelHost(
                     .swipeDrag(onDragStart, onDrag, onRelease),
             ) {
                 CapturePanel(
-                    onClose = onClose,
                     onOpenSettings = { model.sheetOpen.value = true },
                     onCaptureCurrent = onCaptureCurrent,
                     onOpenNote = onOpenNote,
