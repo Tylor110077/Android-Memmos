@@ -205,7 +205,7 @@ object XhsFetcher {
             }
         }.getOrDefault(emptyList())
             .also { if (it.isNotEmpty()) android.util.Log.d("MemmosDbg", "imgList fallback: n=${it.size} first=${it.first().substringAfterLast('/').take(20)}") }
-        } else emptyList()
+        else emptyList()
 
         if (noteObj == null) {
             val descFallback = Regex("""<div id="detail-desc" class="desc">([\s\S]*?)</div>""").find(html)
