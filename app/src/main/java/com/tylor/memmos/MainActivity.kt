@@ -532,11 +532,15 @@ private fun LibraryPage(
     onOpenFile: (java.io.File) -> Unit,
 ) {
     val ctxFiles = LocalContext.current.filesDir
-    // 同步文件：扫描 vault/ 下的非 md 文件（md 已作为剪藏条目展示）
+    // 同步文件：扫描 vault/ 下的非 md 文件（md 已作为剪藏条目展示）；
+    // 排除 media / Memmos graph 下由帖子 md 引用下载的附件——它们只是帖子附属物，不单独显示（用户要求）
     val syncFiles by remember(ctxFiles) {
         mutableStateOf(
             java.io.File(ctxFiles, "vault").walkTopDown()
-                .filter { it.isFile && it.extension.lowercase() != "md" }
+                .filter {
+                    it.isFile && it.extension.lowercase() != "md" &&
+                        !it.canonicalPath.contains("media") && !it.canonicalPath.contains("Memmos graph")
+                }
                 .sortedBy { it.name.lowercase() }
                 .toList(),
         )

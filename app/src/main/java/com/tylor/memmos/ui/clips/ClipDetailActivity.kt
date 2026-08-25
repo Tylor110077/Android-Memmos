@@ -130,9 +130,14 @@ private fun DetailContent(initial: ClipNote) {
     // 视频后台保存进度（VideoSaverService）：当前笔记在下才显示进度条
     val vidProgress by VideoSaverService.progress.collectAsState()
     val vidActive by VideoSaverService.activeNoteId.collectAsState()
-    // 后台保存结束（进度回空闲）：重载本地库切换内嵌播放；刚下载完的自动开播
+    // 后台保存结束（进度回空闲）：服务完成后 activeNoteId 也清 null，不能拿 vidActive==cur.id 判定
+    // （旧判定永远不成立 → 页面停在「保存中」、再点又触发一次保存 = 用户反馈的反复提醒）。
+    var prevSaveId by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(vidProgress, vidActive) {
-        if (vidActive == cur.id && vidProgress == null) {
+        if (vidProgress != null) prevSaveId = vidActive
+        val finished = vidProgress == null && prevSaveId != null && prevSaveId == cur.id
+        if (finished) {
+            prevSaveId = null
             val fresh = ClipStore(ctx).load().firstOrNull { it.id == cur.id }
             if (fresh != null && fresh != cur) {
                 val wasLocal = cur.localVideoPath?.let(::File)?.exists() == true
@@ -218,11 +223,12 @@ private fun DetailContent(initial: ClipNote) {
                         cover = cur.imageUrls.firstOrNull(), // 未播放时用封面当海报（VideoView 是黑底）
                     )
                 } else {
-                    // 下载交给后台前台服务（通知栏进度条）；封面就地显示进度
+                    // 下载交给后台前台服务（通知栏进度条）；封面就地显示进度；
+                    // 同篇正在下载中不再重复触发（避免「后台保存中」反复提醒）
                     VideoCoverBlock(
                         cover = cur.imageUrls.firstOrNull(),
                         progress = if (vidActive == cur.id) vidProgress else null,
-                        onDownload = { VideoSaverService.start(ctx, cur.id) },
+                        onDownload = { if (vidActive != cur.id) VideoSaverService.start(ctx, cur.id) },
                     )
                 }
             }
