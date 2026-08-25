@@ -54,7 +54,7 @@ object XhsDomCapture {
   var avatarEl = q('.author-container img')||q('.avatar-item img')||q('img.avatar');
   var avatar = avatarEl?avatarEl.src:'';
   var tags = qa('.tag, .note-tag, #detail-desc a.tag').map(function(x){return x.textContent.trim().replace(/^#/,'')}).filter(function(x){return x&&x.length<30});
-  var images = qa('.media-container img, .note-slider img, .swiper-slide img, .img-container img').map(function(i){return i.src}).filter(function(s){return s&&s.startsWith('http')&&s.indexOf('avatar')===-1});
+  var images = qa('.media-container img, .note-slider img, .swiper-slide img, .img-container img').map(function(i){return i.src}).filter(function(s){return s&&s.startsWith('http')&&s.indexOf('avatar')===-1&&s.indexOf('spectrum')===-1&&s.indexOf('notes_pre_post')===-1});
   var vEl = q('video source')||q('video');
   var video = vEl?(vEl.currentSrc||vEl.src||vEl.getAttribute('src')):'';
   if(!video||video.indexOf('blob:')===0){
@@ -74,7 +74,7 @@ object XhsDomCapture {
   var wp = [];
   try{
     wp=(performance.getEntriesByType('resource')||[]).map(function(r){return r.name||''})
-      .filter(function(n){return /sns-webpic/i.test(n) && n.indexOf('avatar')===-1 && n.indexOf('notes_pre_post')===-1});
+      .filter(function(n){return /sns-webpic/i.test(n) && n.indexOf('avatar')===-1 && n.indexOf('notes_pre_post')===-1 && n.indexOf('spectrum')===-1});
   }catch(e){}
   if (!images.length && wp.length) images.push(wp[0]);
   // 兜底二：og:image 封面（页面 meta，与正文封面一致）
@@ -95,13 +95,26 @@ object XhsDomCapture {
       var all = qq(p, '.comment-item');
       if (!all.length) return null;
       var main = all.filter(function(el){ return (el.className||'').indexOf('comment-item-sub') === -1; })[0] || all[0];
+      // 评论头像：实测结构是 .avatar 容器内的 img（懒加载可能走 background-image）；.author img 兜底
+      function av(root){
+        try{
+          var i = root.querySelector('.avatar img');
+          if (i && i.src && i.src.indexOf('http')===0) return i.src;
+          var a2 = root.querySelector('.author img');
+          if (a2 && a2.src && a2.src.indexOf('http')===0) return a2.src;
+          var av = root.querySelector('.avatar');
+          if (av){var bg=getComputedStyle(av).backgroundImage||''; var m=bg.match(/url\(["']?(https?:[^"')]+)/); if(m) return m[1];}
+        }catch(e){}
+        return '';
+      }
       var seenS = {};
       var subs = all.filter(function(el){ return (el.className||'').indexOf('comment-item-sub') > -1; })
         .map(function(sc){
-          return {nickname: qt(sc,'.author .name, .name'), content: qt(sc,'.note-text, .content'), likes: 0};
+          return {nickname: qt(sc,'.author .name, .name'), avatar: av(sc),
+                  content: qt(sc,'.note-text, .content'), likes: 0};
         }).filter(function(sc){ var k=sc.nickname+'|'+sc.content; if(seenS[k])return false; seenS[k]=1; return true; });
       return {nickname: qt(main,'.author .name, .name') || qt(p,'.author .name, .name'),
-              avatar: (main.querySelector('.author img')||{src:''}).src,
+              avatar: av(main) || av(p),
               content: qt(main,'.note-text, .content') || qt(p,'.note-text, .content'),
               likes: parseInt(qt(main,'.like .count'))||0, subs: subs};
     }).filter(function(c){ return c && c.content; })

@@ -268,11 +268,12 @@ class XhsCaptureService : Service() {
         handled = true
         update(0.5f, "降级抓取（__INITIAL_STATE__）…")
         scope.launch {
-            val note = withContext(Dispatchers.IO) {
-                runCatching { XhsFetcher.fetch(" $noteUrl") }.getOrNull()
+            val (note, err) = withContext(Dispatchers.IO) {
+                runCatching { XhsFetcher.fetch(" $noteUrl") }
+                    .fold({ it to null }, { null to (it.message ?: "未知错误") })
             }
             handler.post {
-                if (note != null) finish(note) else fail("抓取失败：页面无法解析")
+                if (note != null) finish(note) else fail("抓取失败：$err")
             }
         }
     }

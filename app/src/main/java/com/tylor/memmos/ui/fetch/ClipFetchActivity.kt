@@ -90,7 +90,29 @@ class ClipFetchActivity : ComponentActivity() {
             return
         }
         noteUrl = url
+        // 短链预检：失效的分享短链会被 XHS 重定向到其它内容（用户实测），先展开 302 验证
+        // 落点必须是带 noteId 的笔记页才继续；否则提示复贴原贴链接
+        if (url.contains("xhslink")) {
+            lifecycleScope.launch {
+                val final = XhsFetcher.resolveShort(url)
+                val hasNoteId = final?.let {
+                    Regex("""(?:discovery/item|explore)/([a-zA-Z0-9]+)""").find(it) != null
+                } == true
+                if (final != null && !hasNoteId) {
+                    uiState.value = "分享链接已失效：请在原贴内「复制链接」后重试"
+                    handler.postDelayed({ finish() }, 2000)
+                    return@launch
+                }
+                startWeb();
+            }
+            return
+        }
 
+        startWeb();
+
+    }
+
+    private fun startWeb() {
         CookieManager.getInstance().setAcceptCookie(true)
 
         // UI（Compose）+ 隐藏 WebView 同层：WebView 全屏透明垫底，Compose 状态卡浮于其上
@@ -121,7 +143,7 @@ class ClipFetchActivity : ComponentActivity() {
         setContentView(root)
 
         uiState.value = "加载笔记页…"
-        webView.loadUrl(url)
+        webView.loadUrl(noteUrl)
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -286,7 +308,22 @@ class ClipFetchActivity : ComponentActivity() {
                 author = domNote.author.ifBlank { httpNote?.author.orEmpty() },
                 avatarUrl = domNote.avatarUrl.ifBlank { httpNote?.avatarUrl.orEmpty() },
                 tags = domNote.tags.ifEmpty { httpNote?.tags.orEmpty() },
-                comments = domNote.comments.ifEmpty { httpNote?.comments.orEmpty() },
+                // 评论头像补齐：DOM 路线优先拿内容，头像用 http 路线（__INITIAL_STATE__ 的
+                // user.imageb/image）按 昵称+内容 匹配回填——DOM 头像选择器可能取不到
+                comments = (domNote.comments.ifEmpty { httpNote?.comments.orEmpty() }).map { c ->
+                    val hc = httpNote?.comments?.firstOrNull {
+                        it.nickname == c.nickname && it.content == c.content
+                    }
+                    c.copy(
+                        avatar = c.avatar.ifBlank { hc?.avatar.orEmpty() },
+                        subComments = c.subComments.map { s0 ->
+                            val hs = hc?.subComments?.firstOrNull {
+                                it.nickname == s0.nickname && it.content == s0.content
+                            }
+                            s0.copy(avatar = s0.avatar.ifBlank { hs?.avatar.orEmpty() })
+                        },
+                    )
+                },
                 // 封面链：DOM → 网络拦截的 sns-webpic → __INITIAL_STATE__（JSON 解析失败仍能兜住）
                 imageUrls = domNote.imageUrls.ifEmpty {
                     val c = coverCandidates.firstOrNull { it.startsWith("http") }

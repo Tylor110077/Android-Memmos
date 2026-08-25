@@ -76,6 +76,14 @@ object XhsFetcher {
         return null
     }
 
+    /** 短链预检：302 展开短链，返回最终 URL（非 xhslink 原样返回）；失败返回 null */
+    suspend fun resolveShort(url: String): String? = withContext(Dispatchers.IO) {
+        if (!url.contains("xhslink")) return@withContext url
+        runCatching {
+            client.newCall(noteRequest(url, "")).execute().use { it.request.url.toString() }
+        }.getOrNull()
+    }
+
     /** 从任意分享文本里提取笔记链接（短链或 discovery/explore 长链）
      *  短链实测两种形态：http://xhslink.com/aXXX 与 https://xhslink.cn/o/xxx（2026 手机 App 分享格式） */
     fun extractUrl(text: String): String? {
@@ -93,10 +101,11 @@ object XhsFetcher {
         val cookie = runCatching {
             CookieManager.getInstance().getCookie("https://www.xiaohongshu.com")
         }.getOrNull().orEmpty()
+        var finalUrl = url
         val html = if (url.contains("xhslink")) {
             // 1) 无 Cookie 跟随 302 到最终页（短链域与最终域分离，跨域请求浏览器行为）
             val r1 = client.newCall(noteRequest(url, "")).execute()
-            val finalUrl = r1.request.url.toString()
+            finalUrl = r1.request.url.toString()
             val body1 = r1.body?.string() ?: ""
             r1.close()
             // 2) 最终页在小红书域且有 Cookie → 带 Cookie + 浏览器头重取登录态页面；
@@ -113,6 +122,14 @@ object XhsFetcher {
                 if (!resp.isSuccessful) error("请求失败 HTTP ${resp.code}")
                 resp.body?.string() ?: error("空响应")
             }
+        }
+        // 短链/失效防呆（用户实测：分享短链过期后会被重定向到别的帖子，抓回错误的
+        // 标题/封面/内容）：最终页 URL 必须带 noteId；与 __INITIAL_STATE__ 的 note key
+        // 不一致 = 已跳转到其它内容 → 明确报错，绝不保存错帖。
+        val finalNoteId = Regex("""(?:discovery/item|explore)/([a-zA-Z0-9]+)""")
+            .find(finalUrl)?.groupValues?.get(1)
+        if (finalUrl.contains("xiaohongshu.com") && finalNoteId == null) {
+            error("分享链接已失效：请在内侧「复制链接」获取原贴完整链接后再抓取")
         }
 
         // 页面里 JSON 字符串可能含 </script> 字面量（实测登录态页面变体在 50731 字符处截断），
@@ -133,9 +150,12 @@ object XhsFetcher {
             key to noteMap.getJSONObject(key).getJSONObject("note")
         }.getOrNull()
 
-        val noteId = noteObj?.first
+        if (noteObj?.first != null && finalNoteId != null && noteObj.first != finalNoteId) {
+            error("链接已失效：分享链接过期并跳转到其它内容，请复制原贴完整链接重试")
+        }
+        val noteId = (finalNoteId ?: noteObj?.first
             ?: Regex("""/discovery/item/([a-zA-Z0-9]+)""").find(url)?.groupValues?.get(1)
-            ?: url.hashCode().toString()
+            ?: url.hashCode().toString())
 
         if (noteObj == null) {
             val descFallback = Regex("""<div id="detail-desc" class="desc">([\s\S]*?)</div>""").find(html)
