@@ -102,7 +102,7 @@ private fun ViewerScreen(file: File, displayPath: String) {
                 Text(file.name, color = TextHi, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1)
                 Text(displayPath.substringBeforeLast('/'), color = TextFaint, fontSize = 10.sp)
             }
-            Text("外部打开", color = Color(0xFFB4A7FF), fontSize = 12.sp,
+            Text("外部打开", color = Color(0xFF6EE7B7), fontSize = 12.sp,
                 modifier = Modifier
                     .clip(RoundedCornerShape(8.dp))
                     .clickable { openExternal(file, ctx) }

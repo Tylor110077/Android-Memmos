@@ -19,12 +19,14 @@ val AccentRed = Color(0xFFFF2E4D) // 语义红：删除/失败/危险
 val AccentOrange = Color(0xFFFF9E5C) // 语义橙：仅警示（callout warning）
 val AccentAmber = AccentOrange
 
-/* 品牌色：单一紫色（极简 v3.1：用户要求少颜色——一个品牌色 + 三语义色） */
-val AccentViolet = Color(0xFF8B7BFF)
-val AccentVioletSoft = Color(0xFFB4A7FF) // 紫的浅调：链接/高亮文字
+/* 品牌色（官方源：Vechooool vision-engine-scan-console design.md）：
+ * Accent #10B981 荧光绿；画布 #000000；Surface #FFFFFF；Secondary #EF4444=语义红。
+ * 一个品牌色 + 三语义色（绿系成功/红危险/橙警示） */
+val AccentGreen = Color(0xFF10B981)
+val AccentGreenSoft = Color(0xFF6EE7B7) // 绿的浅调：链接/高亮文字
 
-/** 品牌强调：同一紫的轻微双调渐变（视觉立体但仍是单色系） */
-val AccentBrush = Brush.linearGradient(listOf(Color(0xFF8B7BFF), Color(0xFF9E8FFF)))
+/** 品牌强调：同一绿的轻微双调渐变（视觉立体但仍是单色系） */
+val AccentBrush = Brush.linearGradient(listOf(Color(0xFF10B981), Color(0xFF34D399)))
 
 val Ink = Color(0xFF101218) // 屏幕底色
 
@@ -46,19 +48,19 @@ val BtnPrimaryText = Color(0xFF0A0A0C)
 val BtnGhostBorder = Color(0x33FFFFFF)
 
 /* 功能色 */
-val Success = Color(0xFF46C882)
-val ChipBg = Color(0x2E8B7BFF) // 品牌紫 .18 容器
-val ChipStroke = Color(0x668B7BFF) // 品牌紫 .40 描边
-val ChipText = Color(0xFFD9D0FF) // 紫调浅文（原红调 D7DC 已去小红书化）
+val Success = Color(0xFF34D399) // 成功：绿系浅调（与品牌绿同族，语义区分靠明度）
+val ChipBg = Color(0x2E10B981) // 品牌绿 .18 容器
+val ChipStroke = Color(0x6610B981) // 品牌绿 .40 描边
+val ChipText = Color(0xFFA7F3D0) // 绿调浅文
 
-// 占位封面：单色紫调深浅变体（原六色多源渐变 → 极简统一）
+// 占位封面：单色绿调深浅变体（官方源 Canvas 黑 + 绿 accent 家族）
 val CoverGradients = listOf(
-    listOf(Color(0xFF2B2440), Color(0xFF4A3D75)),
-    listOf(Color(0xFF241F38), Color(0xFF3C3260)),
-    listOf(Color(0xFF322A4E), Color(0xFF524480)),
-    listOf(Color(0xFF1F1B30), Color(0xFF342C55)),
-    listOf(Color(0xFF2A2445), Color(0xFF453A6E)),
-    listOf(Color(0xFF241F38), Color(0xFF3F3566)),
+    listOf(Color(0xFF062A20), Color(0xFF0E5C43)),
+    listOf(Color(0xFF051F18), Color(0xFF0B4634)),
+    listOf(Color(0xFF073226), Color(0xFF126A4C)),
+    listOf(Color(0xFF04160F), Color(0xFF093526)),
+    listOf(Color(0xFF06271D), Color(0xFF0F5840)),
+    listOf(Color(0xFF051F18), Color(0xFF0D4A37)),
 )
 
 /* ───────── 样式规范 v4（参考 Linear/Raycast/Notion/Apple HIG） ───────── */
@@ -95,7 +97,7 @@ fun MemmosTheme(content: @Composable () -> Unit) {
     // 全程深色：本 App 只以悬浮层形态覆盖在宿主上，不跟随系统浅色（决策记录 §5）
     MaterialTheme(
         colorScheme = darkColorScheme(
-            primary = AccentViolet,
+            primary = AccentGreen,
             background = Ink,
             surface = Ink,
         ),

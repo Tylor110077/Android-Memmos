@@ -405,7 +405,7 @@ private fun VideoCoverBlock(cover: String?, progress: Float?, onDownload: () -> 
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth()
                     .padding(horizontal = 12.dp, vertical = 8.dp),
-                color = Color(0xFFB4A7FF),
+                color = Color(0xFF6EE7B7),
                 trackColor = Color(0x33FFFFFF),
             )
         }
@@ -790,7 +790,7 @@ private fun PlayerControlBar(
             contentAlignment = Alignment.CenterStart,
         ) {
             Box(Modifier.fillMaxWidth().height(3.dp).background(Color(0x55FFFFFF)))
-            Box(Modifier.fillMaxWidth(frac).height(3.dp).background(Color(0xFFB4A7FF)))
+            Box(Modifier.fillMaxWidth(frac).height(3.dp).background(Color(0xFF6EE7B7)))
         }
         Row(
             Modifier.fillMaxWidth(),
@@ -1075,10 +1075,10 @@ private fun TagPill(text: String) {
     Text(
         text,
         fontSize = 11.sp,
-        color = Color(0xFFD9D0FF),
+        color = Color(0xFFA7F3D0),
         modifier = Modifier
-            .background(Color(0x2E8B7BFF), RoundedCornerShape(999.dp))
-            .border(1.dp, Color(0x668B7BFF), RoundedCornerShape(999.dp))
+            .background(Color(0x2E10B981), RoundedCornerShape(999.dp))
+            .border(1.dp, Color(0x6610B981), RoundedCornerShape(999.dp))
             .padding(horizontal = 10.dp, vertical = 4.dp),
     )
 }
@@ -1095,7 +1095,7 @@ private fun ActionRow(label: String, action: String, onClick: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(label, fontSize = 13.sp, color = TextMid, modifier = Modifier.weight(1f))
-        Text(action, fontSize = 13.sp, color = Color(0xFFB4A7FF), fontWeight = FontWeight.Bold,
+        Text(action, fontSize = 13.sp, color = Color(0xFF6EE7B7), fontWeight = FontWeight.Bold,
             modifier = Modifier.clickable(onClick = onClick))
     }
 }

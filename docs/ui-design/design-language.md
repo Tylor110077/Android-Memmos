@@ -1,5 +1,9 @@
 # Memmos 悬浮层 · 设计语言 v3（多源化 · 琉璃 Glass 实现规范）
 
+> v3.3（2026-08-25）：**官方源适配**——已购并通过 MCP 获取 vision-engine-scan-console 官方
+> design.md（存档 docs/vechooool/vision-engine-scan-console/），品牌色切换为官方 Accent **#10B981**；
+> 主按钮=白底黑字 9999 胶囊、大标题 Light+负字距（30/300/-0.025em 移动缩放）、画画布 #000000、
+> Secondary #EF4444=语义红、4px 节奏、绿系浅调成功色；紫品牌退役（历史版本 git 可回滚）。
 > v3.2（2026-08-25）：**Vechooool 参考适配**（https://vechooool.com/projects/vision-engine-scan-console，
 > 模板详情需登录，公开可取证：平台库 UI=近黑侧栏+亮内容网格+紧凑微圆角卡片+细边框；SaaS 场景卡=深底+
 > 小型大写标签+低饱和点缀）。采用项：卡片圆角 16→12（紧凑）、分区=侧栏式分组（设置页）、媒体封面直接呈现内容

@@ -148,7 +148,7 @@ SectionLabel("快速抓取")
                 Spacer(Modifier.height(8.dp))
                 Text(
                     cap.status,
-                    fontSize = 11.sp, color = if (cap.done == true) Success else Color(0xFFB4A7FF),
+                    fontSize = 11.sp, color = if (cap.done == true) Success else Color(0xFF6EE7B7),
                 )
             }
             Text(

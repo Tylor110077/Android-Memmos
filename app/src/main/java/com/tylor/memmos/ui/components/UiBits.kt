@@ -25,7 +25,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.tylor.memmos.ui.GlyphIcon
-import com.tylor.memmos.ui.theme.AccentVioletSoft
+import com.tylor.memmos.ui.theme.AccentGreenSoft
 import com.tylor.memmos.ui.theme.GlassFill
 import com.tylor.memmos.ui.theme.GlassStrokeSoft
 import com.tylor.memmos.ui.theme.Shapes
@@ -109,7 +109,7 @@ fun EmptyState(
 fun PillAction(text: String, onClick: () -> Unit) {
     Text(
         text,
-        fontSize = 12.sp, color = AccentVioletSoft, fontWeight = FontWeight.SemiBold,
+        fontSize = 12.sp, color = AccentGreenSoft, fontWeight = FontWeight.SemiBold,
         modifier = Modifier
             .clip(Shapes.Pill)
             .background(Color(0x1A8B7BFF))

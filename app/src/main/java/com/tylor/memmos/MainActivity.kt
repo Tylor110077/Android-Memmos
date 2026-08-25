@@ -99,7 +99,7 @@ import com.tylor.memmos.ui.viewer.FileViewerActivity
 import com.tylor.memmos.ui.theme.AccentBrush
 import com.tylor.memmos.ui.theme.BtnPrimaryBg
 import com.tylor.memmos.ui.theme.BtnPrimaryText
-import com.tylor.memmos.ui.theme.AccentViolet
+import com.tylor.memmos.ui.theme.AccentGreen
 import com.tylor.memmos.ui.theme.ChipBg
 import com.tylor.memmos.ui.theme.GlassFill
 import com.tylor.memmos.ui.theme.GlassStroke
@@ -257,7 +257,7 @@ fun MainTabs(sharedText: String?, clipCapture: Boolean = false) {
                                 )
                             }
                             .size(42.dp)
-                            .background(Color(0x2E8B7BFF), CircleShape),
+                            .background(Color(0x2E10B981), CircleShape),
                     )
                 }
                 Row(Modifier.fillMaxWidth().height(60.dp)) {
@@ -459,7 +459,7 @@ private fun CapturePage(
         message?.let {
             Text(
                 it, fontSize = 11.5.sp,
-                color = if (it.startsWith("已收进")) Color(0xFF8FD4AB) else Color(0xFFB4A7FF),
+                color = if (it.startsWith("已收进")) Color(0xFF8FD4AB) else Color(0xFF6EE7B7),
                 modifier = Modifier.padding(top = 8.dp).fillMaxWidth(),
             )
         }
@@ -528,7 +528,7 @@ private fun LibraryPage(
                 if (clips.isNotEmpty()) {
                     Text(
                         "编辑",
-                        fontSize = 13.sp, color = Color(0xFFB4A7FF), fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp, color = Color(0xFF6EE7B7), fontWeight = FontWeight.Bold,
                         modifier = Modifier.clickable { selecting = true },
                     )
                 }
@@ -537,7 +537,7 @@ private fun LibraryPage(
                 Spacer(Modifier.weight(1f))
                 Text(
                     if (selected.size == filtered.size) "取消全选" else "全选",
-                    fontSize = 13.sp, color = Color(0xFFB4A7FF), fontWeight = FontWeight.Bold,
+                    fontSize = 13.sp, color = Color(0xFF6EE7B7), fontWeight = FontWeight.Bold,
                     modifier = Modifier.clickable {
                         selected = if (selected.size == filtered.size) mutableStateOf(setOf<String>()).value
                         else filtered.map { it.id }.toSet()
@@ -665,7 +665,7 @@ private fun LibraryPage(
                     ),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text(fileBadge(f.extension), fontSize = 13.sp, color = Color(0xFFB4A7FF))
+                    Text(fileBadge(f.extension), fontSize = 13.sp, color = Color(0xFF6EE7B7))
                 }
                 Spacer(Modifier.width(10.dp))
                 Column(Modifier.weight(1f)) {
@@ -696,7 +696,7 @@ private fun LibraryPage(
                 color = TextHi, fontSize = 13.sp, fontWeight = FontWeight.Bold,
                 modifier = Modifier.weight(1f),
             )
-            Text("⋯", color = Color(0xFFB4A7FF), fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            Text("⋯", color = Color(0xFF6EE7B7), fontSize = 18.sp, fontWeight = FontWeight.Bold)
         }
     }
 
@@ -717,7 +717,7 @@ private fun LibraryPage(
         ) {
             Text(
                 "删除所选 ${selected.size} 篇",
-                color = Color(0xFFB4A7FF), fontSize = 15.sp, fontWeight = FontWeight.Bold,
+                color = Color(0xFF6EE7B7), fontSize = 15.sp, fontWeight = FontWeight.Bold,
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable {
@@ -823,7 +823,7 @@ private fun SettingsPage(message: String?, onMessage: (String?) -> Unit, onSync:
         message?.let {
             Text(
                 it, fontSize = 11.sp, lineHeight = 16.sp,
-                color = if (it.startsWith("配对成功") || it.startsWith("同步完成")) Color(0xFF8FD4AB) else Color(0xFFB4A7FF),
+                color = if (it.startsWith("配对成功") || it.startsWith("同步完成")) Color(0xFF8FD4AB) else Color(0xFF6EE7B7),
                 modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
             )
         }
@@ -1065,7 +1065,7 @@ private fun SettingsPage(message: String?, onMessage: (String?) -> Unit, onSync:
                     else -> "停止悬浮窗"
                 },
                 fontSize = 13.sp, fontWeight = FontWeight.Bold,
-                color = if (canDraw && running) Color(0xFFB4A7FF) else BtnPrimaryText,
+                color = if (canDraw && running) Color(0xFF6EE7B7) else BtnPrimaryText,
                 modifier = Modifier
                     .clip(RoundedCornerShape(999.dp))
                     .background(SolidColor(if (canDraw && running) Color(0x14FF2E4D) else BtnPrimaryBg))
@@ -1100,7 +1100,7 @@ private fun SettingsPage(message: String?, onMessage: (String?) -> Unit, onSync:
             }
             Text(
                 if (loggedIn) "重新登录" else "登录",
-                fontSize = 13.sp, color = Color(0xFFB4A7FF), fontWeight = FontWeight.Bold,
+                fontSize = 13.sp, color = Color(0xFF6EE7B7), fontWeight = FontWeight.Bold,
                 modifier = Modifier.clickable {
                     ctx.startActivity(Intent(ctx, XhsLoginActivity::class.java))
                 },
@@ -1164,7 +1164,7 @@ private fun SettingsPage(message: String?, onMessage: (String?) -> Unit, onSync:
                             Text(dev.name, fontSize = 13.sp, color = TextHi, fontWeight = FontWeight.SemiBold)
                             Text("${dev.host}:${dev.port}", fontSize = 11.sp, color = TextFaint)
                         }
-                        Text("配对", fontSize = 13.sp, color = Color(0xFFB4A7FF), fontWeight = FontWeight.Bold)
+                        Text("配对", fontSize = 13.sp, color = Color(0xFF6EE7B7), fontWeight = FontWeight.Bold)
                     }
                 }
             } else if (!scanning) {
@@ -1179,7 +1179,7 @@ private fun SettingsPage(message: String?, onMessage: (String?) -> Unit, onSync:
             var showManual by remember { mutableStateOf(false) }
             Text(
                 if (showManual) "收起手动输入" else "手动输入地址",
-                fontSize = 11.5.sp, color = Color(0xFFB4A7FF),
+                fontSize = 11.5.sp, color = Color(0xFF6EE7B7),
                 modifier = Modifier.clickable { showManual = !showManual }.padding(vertical = 6.dp),
             )
             if (showManual) {
@@ -1270,8 +1270,8 @@ private fun SettingsPage(message: String?, onMessage: (String?) -> Unit, onSync:
                     Modifier
                         .weight(1f)
                         .height(50.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(BtnPrimaryBg) // mckp.live 主按钮：白底黑字
+                        .clip(RoundedCornerShape(999.dp))
+                        .background(BtnPrimaryBg) // 官方源：白底黑字胶囊（radius 9999）
                         .clickable(enabled = !syncing) {
                             val c = SyncPrefs.load(ctx) ?: return@clickable
                             syncing = true; onMessage(null)
@@ -1291,7 +1291,7 @@ private fun SettingsPage(message: String?, onMessage: (String?) -> Unit, onSync:
                         .width(110.dp)
                         .height(50.dp)
                         .clip(RoundedCornerShape(12.dp))
-                        .border(1.dp, Color(0x668B7BFF), RoundedCornerShape(12.dp))
+                        .border(1.dp, Color(0x6610B981), RoundedCornerShape(12.dp))
                         .clickable {
                             SyncPrefs.clear(ctx)
                             paired = false
@@ -1299,7 +1299,7 @@ private fun SettingsPage(message: String?, onMessage: (String?) -> Unit, onSync:
                         },
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text("取消配对", color = Color(0xFFB4A7FF), fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    Text("取消配对", color = Color(0xFF6EE7B7), fontSize = 13.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -1322,7 +1322,7 @@ private fun SettingsPage(message: String?, onMessage: (String?) -> Unit, onSync:
                 LinearProgressIndicator(
                     progress = { p.fraction },
                     modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(99.dp)),
-                    color = AccentViolet,
+                    color = AccentGreen,
                     trackColor = Color(0x33FFFFFF),
                 )
             }
@@ -1368,7 +1368,7 @@ private fun hasXhsSession(ctx: Context): Boolean {
 private fun CaptureProgressCard() {
     val cap by XhsCaptureService.state.collectAsState()
     if (!cap.running && cap.done != false) return
-    val accent = if (cap.done == false) Color(0xFFFF5B6E) else AccentViolet
+    val accent = if (cap.done == false) Color(0xFFFF5B6E) else AccentGreen
     Column(
         Modifier
             .fillMaxWidth()
@@ -1395,7 +1395,7 @@ private fun CaptureProgressCard() {
             LinearProgressIndicator(
                 progress = { cap.progress },
                 modifier = Modifier.fillMaxWidth().height(5.dp).clip(RoundedCornerShape(99.dp)),
-                color = AccentViolet,
+                color = AccentGreen,
                 trackColor = Color(0x33FFFFFF),
             )
         }
@@ -1410,14 +1410,14 @@ private fun CaptureProgressCard() {
 @Composable
 private fun PageTitle(text: String) {
     Column {
-        Text(text, color = TextHi, fontSize = 22.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.3.sp)
+        Text(text, color = TextHi, fontSize = 22.sp, fontWeight = FontWeight.Light, letterSpacing = (-0.55).sp)
         Spacer(Modifier.height(5.dp))
         Box(
             Modifier
                 .width(34.dp)
                 .height(3.dp)
                 .clip(RoundedCornerShape(99.dp))
-                .background(AccentViolet),
+                .background(AccentGreen),
         )
     }
 }
@@ -1481,11 +1481,11 @@ private fun ClipRow(
         } else {
             Box(
                 Modifier.size(64.dp).background(
-                    Brush.linearGradient(listOf(Color(0x2E8B7BFF), Color(0x2E9E8FFF))),
+                    Brush.linearGradient(listOf(Color(0x2E10B981), Color(0x2E9E8FFF))),
                     RoundedCornerShape(10.dp),
                 ),
                 contentAlignment = Alignment.Center,
-            ) { Text(if (note.type == "video") "▶" else if (note.origin == "vault") "M" else "文", color = Color(0xFFB4A7FF), fontSize = 18.sp) }
+            ) { Text(if (note.type == "video") "▶" else if (note.origin == "vault") "M" else "文", color = Color(0xFF6EE7B7), fontSize = 18.sp) }
         }
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
@@ -1557,7 +1557,7 @@ private fun SyncFileRow(f: java.io.File, onClick: () -> Unit) {
                 RoundedCornerShape(9.dp),
             ),
             contentAlignment = Alignment.Center,
-        ) { Text(badge, color = Color(0xFFB4A7FF), fontSize = 12.sp, fontWeight = FontWeight.Bold) }
+        ) { Text(badge, color = Color(0xFF6EE7B7), fontSize = 12.sp, fontWeight = FontWeight.Bold) }
         Spacer(Modifier.width(11.dp))
         Column(Modifier.weight(1f)) {
             Text(f.name, fontSize = 13.sp, color = TextHi, maxLines = 1)
@@ -1588,10 +1588,10 @@ private fun GhostButton(text: String, onClick: () -> Unit) {
             .fillMaxWidth()
             .height(50.dp)
             .clip(RoundedCornerShape(12.dp))
-            .border(1.dp, Color(0x668B7BFF), RoundedCornerShape(12.dp))
+            .border(1.dp, Color(0x6610B981), RoundedCornerShape(12.dp))
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Text(text, color = Color(0xFFB4A7FF), fontSize = 15.sp, fontWeight = FontWeight.Bold)
+        Text(text, color = Color(0xFF6EE7B7), fontSize = 15.sp, fontWeight = FontWeight.Bold)
     }
 }

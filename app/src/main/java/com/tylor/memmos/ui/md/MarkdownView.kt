@@ -36,7 +36,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.tylor.memmos.ui.theme.AccentOrange
-import com.tylor.memmos.ui.theme.AccentVioletSoft
+import com.tylor.memmos.ui.theme.AccentGreenSoft
 import com.tylor.memmos.ui.theme.AccentRed
 import com.tylor.memmos.ui.theme.ChipText
 import com.tylor.memmos.ui.theme.GlassStrokeSoft
@@ -220,7 +220,7 @@ private fun renderInline(raw: String): InlineResult {
         // 组 2（代码）比较特殊，其余按前缀判断；顺序与 INLINE 优先级一致
         if (m.groups[2] != null) {
             sb.append(tok.trim('`'))
-            sb.addStyle(SpanStyle(fontFamily = FontFamily.Monospace, color = AccentVioletSoft, background = Color(0x1AFFFFFF)), start, sb.length)
+            sb.addStyle(SpanStyle(fontFamily = FontFamily.Monospace, color = AccentGreenSoft, background = Color(0x1AFFFFFF)), start, sb.length)
         } else when {
             tok.startsWith("![") -> { // 行内图片（独立一行时已在块级放大渲染）
                 val alt = Regex("^!\\[([^]]*)]").find(tok)?.groupValues?.get(1).orEmpty().ifBlank { "图片" }
@@ -258,19 +258,19 @@ private fun renderInline(raw: String): InlineResult {
             }
             tok.startsWith("$") -> {
                 sb.append(tok.removeSurrounding("$"))
-                sb.addStyle(SpanStyle(fontFamily = FontFamily.Monospace, color = AccentVioletSoft), start, sb.length)
+                sb.addStyle(SpanStyle(fontFamily = FontFamily.Monospace, color = AccentGreenSoft), start, sb.length)
             }
             tok.startsWith("[") -> { // [text](url)
                 val inner = Regex("^\\[([^]]+)]\\(([^)]+)\\)$").find(tok)
                 val label = inner?.groupValues?.get(1) ?: tok
                 val url = inner?.groupValues?.get(2).orEmpty()
                 sb.append(label)
-                sb.addStyle(SpanStyle(color = AccentVioletSoft, textDecoration = TextDecoration.Underline), start, sb.length)
+                sb.addStyle(SpanStyle(color = AccentGreenSoft, textDecoration = TextDecoration.Underline), start, sb.length)
                 links += LinkSpan(start, sb.length, url = url)
             }
             tok.startsWith("http") -> { // 自动 URL
                 sb.append(tok)
-                sb.addStyle(SpanStyle(color = AccentVioletSoft, textDecoration = TextDecoration.Underline), start, sb.length)
+                sb.addStyle(SpanStyle(color = AccentGreenSoft, textDecoration = TextDecoration.Underline), start, sb.length)
                 links += LinkSpan(start, sb.length, url = tok)
             }
             else -> { // #标签
@@ -425,7 +425,7 @@ private fun ListItemView(item: MdParse.Block.ListItem, onWiki: (String) -> Unit)
             color = when {
                 item.task == true -> Success
                 item.task == false -> TextFaint
-                item.ordered -> AccentVioletSoft
+                item.ordered -> AccentGreenSoft
                 else -> TextMid
             },
             fontSize = 13.sp, fontWeight = FontWeight.Bold,

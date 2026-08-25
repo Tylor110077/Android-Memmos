@@ -39,7 +39,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.tylor.memmos.ui.theme.AccentBrush
-import com.tylor.memmos.ui.theme.AccentViolet
+import com.tylor.memmos.ui.theme.AccentGreen
 import com.tylor.memmos.ui.theme.GlassStrokeSoft
 import com.tylor.memmos.ui.theme.TextFaint
 import com.tylor.memmos.ui.theme.TextHi
@@ -82,7 +82,7 @@ fun SettingsSheet(
         Spacer(Modifier.height(14.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Text("浮条设置", fontSize = 16.5.sp, fontWeight = FontWeight.Bold, color = TextHi)
-            Text("完成", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color(0xFFB4A7FF),
+            Text("完成", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color(0xFF6EE7B7),
                 modifier = Modifier.clickable { onDismiss() })
         }
         Spacer(Modifier.height(16.dp))
@@ -181,8 +181,8 @@ private fun EdgeChip(label: String, selected: Boolean, onSelect: () -> Unit) {
         color = if (selected) Color.White else TextMid,
         modifier = Modifier
             .clip(RoundedCornerShape(999.dp))
-            .background(if (selected) AccentViolet else Color(0x14FFFFFF))
-            .border(1.dp, if (selected) AccentViolet else Color(0x33FFFFFF), RoundedCornerShape(999.dp))
+            .background(if (selected) AccentGreen else Color(0x14FFFFFF))
+            .border(1.dp, if (selected) AccentGreen else Color(0x33FFFFFF), RoundedCornerShape(999.dp))
             .clickable { onSelect() }
             .padding(horizontal = 14.dp, vertical = 7.dp),
     )
