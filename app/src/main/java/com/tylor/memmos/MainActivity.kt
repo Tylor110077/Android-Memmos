@@ -899,74 +899,6 @@ private fun SettingsPage(message: String?, onMessage: (String?) -> Unit, onSync:
             modifier = Modifier.padding(top = 6.dp),
         )
 
-        SectionLabel("悬浮窗")
-        Spacer(Modifier.height(10.dp))
-        // 按钮式整卡（用户要求）：整卡可点=动作；两行状态分别显示「权限/运行」
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .background(
-                    if (canDraw && running) Color(0x0D46C882) else GlassFill,
-                    RoundedCornerShape(16.dp),
-                )
-                .border(
-                    1.dp,
-                    if (canDraw && running) Color(0x3346C882) else GlassStrokeSoft,
-                    RoundedCornerShape(16.dp),
-                )
-                .clickable {
-                    when {
-                        !canDraw -> ctx.startActivity(
-                            Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${ctx.packageName}")),
-                        )
-                        !running -> {
-                            AppPrefs.setServiceWanted(ctx, true)
-                            ctx.startForegroundService(Intent(ctx, FloatingService::class.java))
-                        }
-                        else -> {
-                            AppPrefs.setServiceWanted(ctx, false)
-                            ctx.stopService(Intent(ctx, FloatingService::class.java))
-                        }
-                    }
-                }
-                .padding(horizontal = 14.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.size(7.dp).background(if (canDraw) Success else Color(0xFFFF2E4D), CircleShape))
-                    Spacer(Modifier.width(7.dp))
-                    Text(
-                        if (canDraw) "悬浮窗权限 已授予" else "悬浮窗权限 未授予",
-                        fontSize = 13.sp, color = TextHi.copy(alpha = 0.88f),
-                    )
-                }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.size(7.dp).background(if (running) Success else TextFaint, CircleShape))
-                    Spacer(Modifier.width(7.dp))
-                    Text(
-                        if (running) "悬浮窗 运行中" else "悬浮窗 未启动",
-                        fontSize = 13.sp, color = TextFaint,
-                    )
-                }
-            }
-            Spacer(Modifier.width(10.dp))
-            Text(
-                when {
-                    !canDraw -> "去授权"
-                    !running -> "启动悬浮窗"
-                    else -> "停止悬浮窗"
-                },
-                fontSize = 13.sp, fontWeight = FontWeight.Bold,
-                color = if (canDraw && running) Color(0xFFB4A7FF) else Color.White,
-                modifier = Modifier
-                    .clip(RoundedCornerShape(999.dp))
-                    .background(if (canDraw && running) SolidColor(Color(0x14FF2E4D)) else AccentBrush)
-                    .padding(horizontal = 14.dp, vertical = 8.dp),
-            )
-        }
-
-        Spacer(Modifier.height(22.dp))
         SectionLabel("剪藏")
         Spacer(Modifier.height(8.dp))
         var autoDl by remember { mutableStateOf(AppPrefs.autoDownloadVideo(ctx)) }
@@ -1066,6 +998,75 @@ private fun SettingsPage(message: String?, onMessage: (String?) -> Unit, onSync:
         }
 
         Spacer(Modifier.height(10.dp))
+
+        SectionLabel("悬浮窗")
+        Spacer(Modifier.height(10.dp))
+        // 按钮式整卡（用户要求）：整卡可点=动作；两行状态分别显示「权限/运行」
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .background(
+                    if (canDraw && running) Color(0x0D46C882) else GlassFill,
+                    RoundedCornerShape(16.dp),
+                )
+                .border(
+                    1.dp,
+                    if (canDraw && running) Color(0x3346C882) else GlassStrokeSoft,
+                    RoundedCornerShape(16.dp),
+                )
+                .clickable {
+                    when {
+                        !canDraw -> ctx.startActivity(
+                            Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${ctx.packageName}")),
+                        )
+                        !running -> {
+                            AppPrefs.setServiceWanted(ctx, true)
+                            ctx.startForegroundService(Intent(ctx, FloatingService::class.java))
+                        }
+                        else -> {
+                            AppPrefs.setServiceWanted(ctx, false)
+                            ctx.stopService(Intent(ctx, FloatingService::class.java))
+                        }
+                    }
+                }
+                .padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.size(7.dp).background(if (canDraw) Success else Color(0xFFFF2E4D), CircleShape))
+                    Spacer(Modifier.width(7.dp))
+                    Text(
+                        if (canDraw) "悬浮窗权限 已授予" else "悬浮窗权限 未授予",
+                        fontSize = 13.sp, color = TextHi.copy(alpha = 0.88f),
+                    )
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.size(7.dp).background(if (running) Success else TextFaint, CircleShape))
+                    Spacer(Modifier.width(7.dp))
+                    Text(
+                        if (running) "悬浮窗 运行中" else "悬浮窗 未启动",
+                        fontSize = 13.sp, color = TextFaint,
+                    )
+                }
+            }
+            Spacer(Modifier.width(10.dp))
+            Text(
+                when {
+                    !canDraw -> "去授权"
+                    !running -> "启动悬浮窗"
+                    else -> "停止悬浮窗"
+                },
+                fontSize = 13.sp, fontWeight = FontWeight.Bold,
+                color = if (canDraw && running) Color(0xFFB4A7FF) else Color.White,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(999.dp))
+                    .background(if (canDraw && running) SolidColor(Color(0x14FF2E4D)) else AccentBrush)
+                    .padding(horizontal = 14.dp, vertical = 8.dp),
+            )
+        }
+
+        Spacer(Modifier.height(22.dp))
         Row(
             Modifier
                 .fillMaxWidth()
