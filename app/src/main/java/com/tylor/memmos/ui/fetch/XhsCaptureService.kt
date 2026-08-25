@@ -293,8 +293,16 @@ class XhsCaptureService : Service() {
         if (note.videoUrl != null && AppPrefs.autoDownloadVideo(this)) {
             VideoSaverService.start(this, note.id)
         }
-        state.value = CaptureState(running = false, progress = 1f, status = "抓取完成「${note.title.take(12)}」", done = true)
-        updateNotif(1f, "抓取完成")
+        // 完成文案区分：视频另走 VideoSaverService（独立「正在保存视频」通知）——
+        // 只写「抓取完成」会让用户误以为视频也已保存好（用户反馈「悬浮窗提示已保存好，点开还在保存中」）
+        val videoPending = note.videoUrl != null && AppPrefs.autoDownloadVideo(this)
+        state.value = CaptureState(
+            running = false, progress = 1f, done = true,
+            status = if (videoPending)
+                "抓取完成「${note.title.take(12)}」，视频后台保存中（见通知）"
+            else "抓取完成「${note.title.take(12)}」",
+        )
+        updateNotif(1f, if (videoPending) "抓取完成，视频后台保存中" else "抓取完成")
         stopForeground(false)
         nm.notify(NOTIF_ID, notif(1f, "抓取完成 ✓", done = true))
         handler.postDelayed({ stopSelf() }, 4000)

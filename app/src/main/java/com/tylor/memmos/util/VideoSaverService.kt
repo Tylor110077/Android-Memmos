@@ -74,10 +74,14 @@ class VideoSaverService : Service() {
 
         scope.launch {
             var ok = false
+            // 进度单调不减：失败重试会从 0 重新累积，直接显示会 30%→22% 回退（用户反馈）
+            var lastP = 0f
             val failMsg = runCatching {
                 val f = MediaDownloader.downloadVideo(this@VideoSaverService, note) { p ->
-                    progress.value = p
-                    nm.notify(NOTIF_ID, notif("正在保存视频…", (p * 100).toInt()))
+                    val mono = if (p >= lastP) p else lastP
+                    lastP = mono
+                    progress.value = mono
+                    nm.notify(NOTIF_ID, notif("正在保存视频…", (mono * 100).toInt()))
                 }
                 runCatching { MediaSaver.saveVideoToGallery(this@VideoSaverService, f) }
                 val store = ClipStore(this@VideoSaverService)
