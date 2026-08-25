@@ -85,9 +85,11 @@ class FloatingService : Service() {
 
     private var anim: ValueAnimator? = null
 
-    /** onChange 合并器：同一帧内多次值变化只执行一次窗口更新（快速拖滑杆每帧会有
-     *  尺寸+位置两次 updateViewLayout，高频重排=界面闪现——用户反馈慢拖无、快拖有） */
+    /** onChange 节流器：快速拖滑杆时窗口几何（尺寸/位置）更新降到 25fps——
+     *  每帧一次 updateViewLayout 在 ColorOS 等系统上仍会高频重排=屏闪（用户反馈） */
+    private var applyPending = false
     private val applyOnChange = Runnable {
+        applyPending = false
         applyScaleToTabWindow()
         applyRestingPosition(animated = false)
     }
@@ -98,22 +100,27 @@ class FloatingService : Service() {
         super.onCreate()
         wm = getSystemService(Context.WINDOW_SERVICE) as WindowManager
         // 位置/大小变化都走这里：重算热区尺寸（scale 影响视觉与触控）+ 停靠位置。
-        // 滑块拖动是连续变化，必须瞬时定位；合并到下一帧执行一次，避免每帧两次 updateViewLayout
+        // 拖动是连续变化：40ms 合并一次（执行时读最新值），仍跟手且大幅降低窗口重排频率
         model.onChange = {
-            main.removeCallbacks(applyOnChange)
-            main.post(applyOnChange)
+            if (!applyPending) {
+                applyPending = true
+                main.postDelayed(applyOnChange, 40L)
+            }
         }
     }
+
+    /** 触控热区（用户要求判定范围比显示更大、更容易触发）：可视条 5-36dp，
+     *  宽度侧另留 ≥40dp、长度侧 ≥24dp，且整体 ≥56dp，余量全部留在屏幕内侧 */
+    private fun hotW(v: Float) = maxOf(56f, v + 40f)
+    private fun hotH(v: Float) = maxOf(56f, v + 24f)
 
     /** 宽/长滑块生效：按当前 barWidth/barLength 重算滑块窗口热区（视觉+触控同步） */
     private fun applyScaleToTabWindow() {
         if (tabView == null || !::tabLp.isInitialized) return
         val w = model.barWidth.value
         val l = model.barLength.value
-        val hotWdp = maxOf(48f, w + 28f)
-        val hotHdp = maxOf(48f, l + 16f)
-        val newW = dp(hotWdp).roundToInt()
-        val newH = dp(hotHdp).roundToInt()
+        val newW = dp(hotW(w)).roundToInt()
+        val newH = dp(hotH(l)).roundToInt()
         if (tabLp.width == newW && tabLp.height == newH) return // 尺寸没变跳过，减少无谓重排
         tabLp.width = newW
         tabLp.height = newH
@@ -144,11 +151,9 @@ class FloatingService : Service() {
 
     private fun showTab() {
         if (tabView != null) return
-        // 视觉宽/长独立设定（默认 20×88dp）；≥48dp 触控余量全部留在屏幕内侧
-        val visWdp = model.barWidth.value
-        val visHdp = model.barLength.value
-        val hotWdp = maxOf(48f, visWdp + 28f)
-        val hotHdp = maxOf(48f, visHdp + 16f)
+        // 视觉宽/长独立设定（默认 20×88dp）；触控余量（≥40/24dp、整体 ≥56dp）全部留在屏幕内侧
+        val hotWdp = hotW(model.barWidth.value)
+        val hotHdp = hotH(model.barLength.value)
         tabLp = WindowManager.LayoutParams().apply {
             type = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
             format = PixelFormat.TRANSLUCENT
@@ -195,7 +200,7 @@ class FloatingService : Service() {
         Box(
             Modifier
                 .fillMaxSize()
-                .size((maxOf(48f, bw + 28f)).dp, (maxOf(48f, bl + 16f)).dp),
+                .size(hotW(bw).dp, hotH(bl).dp),
             contentAlignment = align,
         ) {
             EdgeTab(
