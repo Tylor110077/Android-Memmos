@@ -990,7 +990,7 @@ private fun SettingsPage(message: String?, onMessage: (String?) -> Unit, onSync:
                             singleLine = true,
                             textStyle = TextStyle(color = TextHi, fontSize = 13.sp),
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            modifier = Modifier.fillMaxHeight(),
+                            modifier = Modifier.fillMaxWidth(), // 只占内容高，垂直居中交给外层 Box
                         )
                     }
                 }
