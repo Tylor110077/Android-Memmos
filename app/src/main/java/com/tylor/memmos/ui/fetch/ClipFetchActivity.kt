@@ -83,7 +83,7 @@ class ClipFetchActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        val shared = intent.getStringExtra(EXTRA_TEXT) ?: intent.getStringExtra(Intent.EXTRA_TEXT).orEmpty()
+        val shared = intent.getStringExtra(EXTRA_TEXT).orEmpty()
         val url = XhsFetcher.extractUrl(shared)
         if (url == null) {
             finish()

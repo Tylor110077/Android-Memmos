@@ -120,7 +120,7 @@ fun CapturePanel(
                     if (recent.isEmpty()) {
                         com.tylor.memmos.ui.components.EmptyState(
                             title = "暂无剪藏",
-                            desc = "点下方 抓取当前笔记，或在内容 App「分享 → 更多 → Memmos」抓取第一篇",
+                            desc = "点下方 抓取当前笔记，或在小红书复制笔记链接后点它",
                         )
                     } else {
                         recent.forEach { n ->
@@ -133,7 +133,7 @@ fun CapturePanel(
                 Column(Modifier.fillMaxWidth().weight(1f)) {
                     SectionLabel("快速抓取")
                     Spacer(Modifier.height(10.dp))
-                    // 后台抓取入口（剪贴板识别 / 小红书分享面板直达），进度实时显示
+                    // 后台抓取入口（剪贴板识别），进度实时显示
                     Box(
                         Modifier
                             .fillMaxWidth()
@@ -177,7 +177,7 @@ fun CapturePanel(
                         )
                     }
                     Text(
-                        "① 在内容 App「分享 → 更多 → Memmos」识别当前帖子（当前支持小红书）；② 复制链接后点这里。均后台完成。",
+                        "在小红书复制笔记链接后，点这里即可抓取（后台完成）。",
                         fontSize = 10.sp, color = TextSoft, lineHeight = 15.sp,
                         modifier = Modifier.padding(top = 5.dp),
                     )

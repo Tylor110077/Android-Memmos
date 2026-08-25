@@ -136,24 +136,12 @@ import kotlinx.coroutines.withContext
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // 小红书分享面板直达（用户要求：不用复制链接也能快速识别当前帖子）：
-        // XHS 分享会把当前帖子链接作为 SEND text/plain 发来——不打开 App UI，
-        // 直接交给后台抓取服务（通知/悬浮窗进度），本 Activity 立即退出，无跳转感
-        val sharedText = intent?.takeIf { it.action == Intent.ACTION_SEND }
-            ?.getStringExtra(Intent.EXTRA_TEXT).orEmpty()
-        if (intent?.action == Intent.ACTION_SEND) {
-            if (sharedText.isNotBlank() && XhsFetcher.extractUrl(sharedText) != null) {
-                XhsCaptureService.start(this, sharedText)
-            }
-            finish()
-            return
-        }
         enableEdgeToEdge()
         // 悬浮窗按钮引导：本 Activity 在前台才能合法读剪贴板（Android 10+ 后台读取被拦截）
         val clipCapture = intent?.getBooleanExtra("clipCapture", false) == true
         setContent {
             MemmosTheme {
-                MainTabs(sharedText, clipCapture)
+                MainTabs(clipCapture)
             }
         }
     }
@@ -162,7 +150,7 @@ class MainActivity : ComponentActivity() {
 private enum class Tab(val label: String) { CAPTURE("捕捉"), LIBRARY("剪藏库"), SETTINGS("设置") }
 
 @Composable
-fun MainTabs(sharedText: String?, clipCapture: Boolean = false) {
+fun MainTabs(clipCapture: Boolean = false) {
     val ctx = LocalContext.current
     val store = remember { ClipStore(ctx) }
     val scope = rememberCoroutineScope()
@@ -193,17 +181,6 @@ fun MainTabs(sharedText: String?, clipCapture: Boolean = false) {
     }
 
     fun remove(note: ClipNote) = removeMany(setOf(note.id))
-
-
-    // 系统分享进入：跳转抓取页（WebView 渲染管线），完成后 ON_RESUME 自动刷新列表
-    LaunchedEffect(sharedText) {
-        if (!sharedText.isNullOrBlank() && XhsFetcher.extractUrl(sharedText) != null) {
-            tab = Tab.LIBRARY
-            ctx.startActivity(
-                Intent(ctx, ClipFetchActivity::class.java).putExtra(ClipFetchActivity.EXTRA_TEXT, sharedText),
-            )
-        }
-    }
 
     // 悬浮窗「抓取当前笔记」引导：前台合法读剪贴板（Android 10+ 后台读取被拦截）
     LaunchedEffect(clipCapture) {
@@ -527,7 +504,7 @@ private fun CapturePage(
 
         Spacer(Modifier.height(24.dp))
         Text(
-            "提示：在任意内容 App 点「分享 → 更多 → Memmos」即可收进剪藏库（当前支持小红书）。",
+            "提示：在小红书复制笔记链接后，点「抓取」即可收进剪藏库。",
             fontSize = 11.sp, color = TextGhost, textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp),
         )
@@ -641,7 +618,7 @@ private fun LibraryPage(
                     com.tylor.memmos.ui.components.EmptyState(
                         title = if (clips.isEmpty()) "还没有剪藏" else "没有匹配的剪藏",
                         desc = if (clips.isEmpty())
-                            "在任意内容 App 点「分享 → 更多 → Memmos」抓取第一篇\n（当前支持小红书）"
+                            "在小红书复制笔记链接后点「抓取」收第一篇\n（当前支持小红书）"
                         else "换个关键词再试试",
                     )
                 }
