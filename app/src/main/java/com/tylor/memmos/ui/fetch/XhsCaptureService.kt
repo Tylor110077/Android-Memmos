@@ -297,9 +297,9 @@ class XhsCaptureService : Service() {
                     val domImgs = domNote.imageUrls.filter { isNoteImage(it) }
                     when {
                         og != null -> listOf(og) + domImgs.filter { it != og }
-                        else -> domImgs.ifEmpty { coverCandidates.distinct() }
-                    }
-                }),
+                        else -> domImgs
+                    }.ifEmpty { coverCandidates }
+                }).distinct(),
                 videoUrl = httpNote?.videoUrl ?: domNote.videoUrl,
                 type = if ((httpNote?.videoUrl ?: domNote.videoUrl) != null) "video" else domNote.type,
             )
