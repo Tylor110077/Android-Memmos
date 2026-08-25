@@ -1358,9 +1358,9 @@ private fun fileBadge(ext: String): String = when (ext.lowercase()) {
 
 /** 同步结果消息：两端一致时给出明确「无内容可同步」提示（用户要求） */
 private fun syncDoneMessage(r: SyncEngine.Result): String = when {
-    r.uploaded == 0 && r.downloaded == 0 ->
-        "两端已一致：没有需要同步的内容（上传 0 · 下载 0 · 已是最新 ${r.skipped}）"
-    else -> "同步完成：上传 ${r.uploaded} · 下载 ${r.downloaded} · 已是最新 ${r.skipped}"
+    r.uploaded == 0 && r.deleted == 0 ->
+        "两端一致：手机内容已全部同步到 Obsidian（上传 0 · 失败 ${r.skipped}）"
+    else -> "同步完成：上传 ${r.uploaded} 篇 · 清理已删帖子 ${r.deleted} 个 · 失败 ${r.skipped}"
 }
 
 private fun hasXhsSession(ctx: Context): Boolean {

@@ -93,6 +93,11 @@ class SyncClient(
     /** 二进制下载：返回 base64 字符串（空串=不存在） */
     suspend fun getBinary(path: String): String =
         JSONObject(call("/api/binary?path=$path")).optString("base64")
+
+    /** 删除远端文件（Obsidian 插件侧文件；手机为唯一真源时的联删） */
+    suspend fun deleteFile(path: String) {
+        call("/api/delete", "POST", JSONObject().put("path", path).toString())
+    }
 }
 
 /** 配对信息与剪藏转换用的路径规则，统一放这里避免两处漂移 */

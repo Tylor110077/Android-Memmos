@@ -24,102 +24,12 @@ import java.util.Locale
  */
 object SyncEngine {
 
-    data class Result(val uploaded: Int, val downloaded: Int, val skipped: Int)
+    /** 同步结果：uploaded=上传篇数 · deleted=清理的远端已删帖子 · skipped=上传失败篇数 */
+    data class Result(val uploaded: Int, val deleted: Int, val skipped: Int)
 
-    /** 帖子 md 判定：我们上传的剪藏（固定结构 origin content/{标题}/note.md 或带 memmos-id 的 md）。
-     * 下载侧按「手机是否已有该 memmos-id」决定跳过/重组（用户模型：手机缺失时把文件组合回帖子）。 */
-    private fun isPostMd(path: String, md: String? = null): Boolean {
-        if (path.contains("/origin content/")) return true
-        if (md != null && md.contains("memmos-id:")) return true
-        return false
-    }
-
+    /** 帖子 md 里的 memmos-id（远端联删/归属识别用） */
     private val POST_ID_RE = Regex("""^memmos-id:\s*(\S+)""", RegexOption.MULTILINE)
 
-    /**
-     * Obsidian 帖子文件 → 手机帖子（用户模型第 3 条：手机缺失时重组）。
-     * id 用 memmos-id 与已有帖子对齐（去重/更新）；origin=xhs（「vault 副本清理」不误删）；
-     * md 里的媒体引用映射为 vault 下已下载的本地路径（canonical，阅读器直接可用）。
-     */
-    private fun fromPostToClip(
-        ctx: Context,
-        path: String,
-        md: String,
-        postId: String,
-        authorOverride: String?,
-        avatarOverride: String?,
-    ): ClipNote {
-        val base = fromMarkdown(path, md, authorOverride, avatarOverride)
-        val vaultDir = java.io.File(ctx.filesDir, "vault")
-        val mdDir = path.substringBeforeLast('/')
-        fun localUri(rel: String) = "file://" + java.io.File(vaultDir, "$mdDir/$rel").canonicalFile.absolutePath
-        fun localPath(rel: String) = java.io.File(vaultDir, "$mdDir/$rel").canonicalFile.absolutePath
-        // 图片：本地 media 引用（file:// uri，Coil 才能显示）+ 远程直链（Cover/Image 任意 alt 都算）
-        val imgRefs = Regex("""!\[[^\]]*\]\(((?:\.\./)*media/[^)]+)\)""").findAll(md)
-            .map { localUri(it.groupValues[1]) }.toList()
-        val remoteImgs = Regex("""!\[[^\]]*\]\((https?://[^)]+)\)""").findAll(md)
-            .map { it.groupValues[1] }.toList()
-        // 视频：<video src> —— 本地 media 引用 → 文件路径；http → videoUrl（远程直链）
-        val src = Regex("""<video[^>]*src="([^"]+)"""").find(md)?.groupValues?.get(1)
-        val localVid = src?.takeIf { it.contains("media/") && !it.startsWith("http") }?.let { localPath(it) }
-        val videoUrl = src?.takeIf { it.startsWith("http") } ?: base.videoUrl
-        val clipped = Regex("""^clippedAt:\s*(.+)$""", RegexOption.MULTILINE).find(md)?.groupValues?.get(1)?.trim()
-        val clippedAt = runCatching {
-            SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.CHINA).parse(clipped.orEmpty()).time
-        }.getOrDefault(base.clippedAt)
-        return base.copy(
-            id = postId,
-            origin = "xhs",
-            desc = extractPureBody(md), // 反解：只留原正文（剥图片行/video/评论/tags，防「文字变链接」）
-            imageUrls = (imgRefs + remoteImgs).distinct().ifEmpty { base.imageUrls },
-            type = if (src != null) "video" else base.type,
-            videoUrl = if (localVid != null) null else videoUrl,
-            localVideoPath = localVid,
-            comments = extractComments(md),
-            clippedAt = clippedAt,
-            originPath = path,
-            rawMd = md,
-        )
-    }
-
-    /** toMarkdown 正文反解：去掉图片行 / <video> 标签 / tags 代码块 / 「## 评论」区块，还原纯正文 */
-    private fun extractPureBody(md: String): String {
-        val fm = Regex("""^---\n([\s\S]*?)\n---\n?""").find(md)
-        var body = if (fm != null) md.substring(fm.range.last + 1) else md
-        body = body.replace(Regex("""!\[[^\]]*\]\([^)]*\)"""), "")
-        body = body.replace(Regex("""<video[^>]*>\s*</video>"""), "")
-        body = body.replace(Regex("""```[\s\S]*?```"""), "")
-        body = body.replace(Regex("""^#+\s+[^\n]*$""", RegexOption.MULTILINE), "") // 去掉 md 标题行（正文里保留）
-        body = body.replace(Regex("""## 评论[\s\S]*$"""), "")
-        return body.replace(Regex("""\n{3,}"""), "\n\n").trim()
-    }
-
-    /** 评论反解（toMarkdown 布局：`- **昵称**：内容（♥N）` / `  - **昵称**：内容` 楼中楼） */
-    private fun extractComments(md: String): List<ClipComment> {
-        val block = md.substringAfter("## 评论", "")
-        if (block.isBlank()) return emptyList()
-        val out = mutableListOf<ClipComment>()
-        var cur: ClipComment? = null
-        val re = Regex("""^\s{0,2}- \*\*(.+?)\*\*：?(.*)$""")
-        block.lines().forEach { line ->
-            val m = re.find(line) ?: return@forEach
-            val nickname = m.groupValues[1].trim()
-            val content = m.groupValues[2].trim()
-                .replace(Regex("""（♥\d+）$"""), "").trim()
-            if (line.startsWith("  -")) {
-                cur?.let { c ->
-                    val idx = out.indexOf(c)
-                    if (idx >= 0) out[idx] = c.copy(subComments = c.subComments + ClipComment(nickname, "", content, 0))
-                }
-            } else {
-                cur = ClipComment(nickname, "", content, 0)
-                out += cur!!
-            }
-        }
-        return out
-    }
-
-    /** 同步根目录：用户要求固定进 Memmos graph（子文件夹按分类自动创建，无需预建） */
     private fun rootDir(client: SyncClient): String = client.rootFolder.ifBlank { "Memmos graph" }
 
     /** 手机剪藏 → Obsidian md 路径（用户要求：二个顶层文件夹 + 每帖一夹，双向识别稳定）：
@@ -191,41 +101,6 @@ object SyncEngine {
     }
 
     /**
-     * md → 手机剪藏（frontmatter 粗解析：title/author/url/tags + 正文）。
-     * authorOverride/avatarOverride：个人资料（设置页），Obsidian 同步笔记的作者与头像
-     * 自动设为该身份（md frontmatter 无作者时）。
-     */
-    fun fromMarkdown(
-        path: String,
-        md: String,
-        authorOverride: String? = null,
-        avatarOverride: String? = null,
-    ): ClipNote {
-        val fm = Regex("""^---\n([\s\S]*?)\n---\n?""").find(md)
-        val meta = fm?.groupValues?.get(1) ?: ""
-        val body = if (fm != null) md.substring(fm.range.last + 1).trim() else md
-        fun field(name: String) = Regex("""^$name:\s*(.*)$""", RegexOption.MULTILINE).find(meta)?.groupValues?.get(1)?.trim().orEmpty()
-        val tags = Regex("""^tags:\s*\[(.*)]$""", RegexOption.MULTILINE).find(meta)?.groupValues?.get(1)
-            ?.split(",")?.map { it.trim() }?.filter { it.isNotBlank() } ?: emptyList()
-        return ClipNote(
-            id = "vault:${sha16(md)}",
-            title = field("title").ifBlank { path.substringAfterLast('/').removeSuffix(".md") },
-            desc = body,
-            author = field("author").ifBlank { authorOverride.orEmpty() },
-            tags = tags,
-            imageUrls = Regex("""!\[\]\((https?://[^)]+)\)""").findAll(md).map { it.groupValues[1] }.toList(),
-            videoUrl = null,
-            type = "md",
-            pageUrl = field("url").ifBlank { field("source") }, // importer frontmatter 用 source 字段
-            clippedAt = System.currentTimeMillis(),
-            origin = "vault",
-            originPath = path,
-            rawMd = md,
-            avatarUrl = avatarOverride.orEmpty(),
-        )
-    }
-
-    /**
      * 同步进度（用户要求进度条）：done/total 按阶段推进，null=空闲。
      * SettingsPage 据此显示进度条；同步期间 UI 可轮询刷新。
      */
@@ -235,7 +110,7 @@ object SyncEngine {
 
     val progress = MutableStateFlow<SyncProgress?>(null)
 
-    /** 最近一次同步结果消息（显示在进度条位置；null=还没有同步过） */
+    /** 最近一次同步结果消息（显示在同步进度位置；null=还没有同步过） */
     val lastSyncMsg = MutableStateFlow<String?>(null)
 
     private fun sha16(s: String): String =
@@ -338,108 +213,50 @@ object SyncEngine {
             }
         }
 
-        // ── 下载/更新：远端 md（按 originPath 对位，指纹不同才拉） ──
-        var down = 0
-        val vaultDir = java.io.File(ctx.filesDir, "vault").apply { mkdirs() }
-        // 进度同样只统计需要下载的项（非帖子 md + 缺失附件；已最新不计入）
-
-        /**
-         * 下载判定（用户同步模型：手机=帖子、Obsidian=文件，附件只是 md 的附属物）：
-         * - 帖子 md（memmos-id）→ 跳过（手机端已有该帖子，防重复传递）
-         * - 其他 .md → 需要时下载并**重组为帖子**进剪藏库（附件随 md 引用拉取）
-         * - 非 md（媒体/附件）→ **不单独下载**（避免与帖子重复；它们由所在 md 引用拉取）
-         */
-        var doneD = 0
-        val needDown = remote.count { (path, item) ->
-            if (!path.endsWith(".md", true)) return@count false
-            val ex = local.firstOrNull { it.originPath == path }
-            if (ex != null && sha16(ex.rawMd.orEmpty()) == item.sha256) return@count false
-            true // 其余（普通文件、帖子缺失/更新）都算工作项；循环内精确再跳过
+        // ── 远端联删（手机唯一真源，用户 2026-08-26 决定单向同步）：
+        //   手机已删除的帖子 → 连带删除 Obsidian 上的 note.md 与媒体附件（media/{id12}-*）；
+        //   「Obsidian 有而手机没有」目前不处理（浏览器插件阶段再说）。 ──
+        var deletedRemote = 0
+        val myPostIds = local.filter { it.origin != "vault" }.map { it.id }.toSet()
+        val root = rootDir(client)
+        var remotePosts = 0
+        for ((path, item) in remote) {
+            if (!path.endsWith(".md", true) || !path.contains("/origin content/")) continue
+            remotePosts++
+            val md = runCatching { client.getFileRaw(path) }.getOrNull() ?: continue
+            val postId = POST_ID_RE.find(md)?.groupValues?.get(1) ?: continue
+            if (postId in myPostIds) continue
+            val prefix = "${postId.take(12)}"
+            runCatching { client.deleteFile(path) }
+                .onFailure { android.util.Log.d("MemmosDbg", "remote delete md fail $path: ${it.message}") }
+            remote.keys.filter { it.startsWith("$root/media/$prefix") }.forEach { a ->
+                runCatching { client.deleteFile(a) }
+                    .onFailure { android.util.Log.d("MemmosDbg", "remote delete media fail $a: ${it.message}") }
+            }
+            android.util.Log.d("MemmosDbg", "remote delete post: $path (id=$postId) attachments removed")
+            deletedRemote++
         }
         android.util.Log.d(
             "MemmosDbg",
-            "sync: inventory=${remote.size} (posts=${remote.count { isPostMd(it.key) }}) needUp=$needUp needDown=$needDown",
+            "sync: inventory=${remote.size} posts=$remotePosts needUp=$needUp orphanToDelete=$deletedRemote",
         )
-        // 一次性清理旧版「附件独立下载」落地的重复文件（帖子拆分目录下的媒体副本）
-        runCatching { java.io.File(vaultDir, "Memmos graph/media").deleteRecursively() }
-        if (needDown > 0) progress.value = SyncProgress("下载到手机", 0, needDown)
-        for ((path, item) in remote) {
-            if (!path.endsWith(".md", true)) continue
-            // 先取内容：帖子需解析 memmos-id 判重（手机缺失 → 重组为帖子；已有 → 跳过防重复）
-            val md = runCatching { client.getFile(path) }.getOrNull() ?: continue
-            if (sha16(md) != item.sha256) continue // 内容变动中，跳过保一致
-            val postId = POST_ID_RE.find(md)?.groupValues?.get(1)
-            val ex = local.firstOrNull { it.originPath == path }
-            // 旧版重组产物（desc 里残留图片/视频语法）强制重下：round-trip 升级后刷新为干净格式
-            val staleRebuild = postId != null && ex != null && (
-                ex.desc.contains("![") || ex.desc.contains("<video") ||
-                    ex.imageUrls.any { it.startsWith("/data") || it.startsWith("/storage") } || // 裸路径封面
-                    ex.imageUrls.any { // file:// 引用但本地媒体缺失（旧版服务器路径含 .. 下载失败）
-                        it.startsWith("file://") && !java.io.File(it.removePrefix("file://")).exists()
-                    }
-                )
-            if (ex != null && sha16(ex.rawMd.orEmpty()) == item.sha256 && !staleRebuild) continue // 一致跳过
-            if (postId != null && local.any { it.id == postId && it.origin != "vault" } && !staleRebuild) continue // 已有同帖
-            doneD++
-            progress.value = SyncProgress("下载到手机", doneD.coerceAtMost(needDown), needDown)
-            android.util.Log.d("MemmosDbg", if (postId != null) "down post: $path id=$postId" else "down md: $path")
-            runCatching {
-                // 个人资料兜底：Obsidian 同步笔记自动带上用户设置的名字/头像（空则不覆盖）
-                val author = AppPrefs.profileName(ctx).ifBlank { null }
-                val avatar = AppPrefs.profileAvatar(ctx).ifBlank { null }
-                val note = if (postId != null) {
-                    fromPostToClip(ctx, path, md, postId, author, avatar) // Obsidian 帖子 → 手机帖子（重组）
-                } else {
-                    fromMarkdown(path, md, author, avatar)
-                }
-                val idx = local.indexOfFirst { it.originPath == path }
-                if (idx >= 0) local[idx] = note else local.add(0, note)
-                down++
-                // md 引用的本地媒体一并拉取：![](media/x) / ![[media/x]] / <video src> / [x](media/x)
-                // 支持 ../media/（分类子目录引用根级 media，同 XHS Notes 结构）
-                val mdDir = path.substringBeforeLast('/')
-                val mediaRefs = mutableSetOf<String>()
-                Regex("""\(((?:\.\./)*media/[^)]+)\)""").findAll(md).forEach { mediaRefs += it.value.trim('(', ')') }
-                Regex("""!\[\[((?:\.\./)*media/[^\]]+)\]\]""").findAll(md).forEach { mediaRefs += it.groupValues[1] }
-                Regex("""src="((?:\.\./)*media/[^"]+)"""").findAll(md).forEach { mediaRefs += it.groupValues[1] }
-                mediaRefs.forEach { rel ->
-                    // canonicalFile：解析 ../media/ 相对引用到真实路径（旧版含 ".." 的路径 mkdirs 会失败）
-                    val target = java.io.File(vaultDir, "$mdDir/$rel").canonicalFile
-                    if (target.exists()) return@forEach
-                    // 服务器端路径同样归一 "../"（服务端不支持 .. —— 旧版媒体全部下载失败/封面灰）
-                    val serverPath = java.io.File("$mdDir/$rel").canonicalPath
-                    val b64 = runCatching { client.getBinary(serverPath) }.getOrDefault("")
-                    if (b64.isNotBlank()) {
-                        target.parentFile?.mkdirs()
-                        target.writeBytes(Base64.decode(b64, Base64.NO_WRAP))
-                    }
-                }
-                // md 本身也存一份到 vault 目录（阅读器可读）
-                val mdFile = java.io.File(vaultDir, path)
-                mdFile.parentFile?.mkdirs()
-                mdFile.writeText(md)
-            }
-        }
-
-        // 帖子副本清理（用户要求：防止帖子两端重复）：
-        // 凡「内容含 memmos-id 标记」的 vault 条目 = 手机上传帖子的误下载副本（新旧路径结构都覆盖），
-        // 连同 filesDir/vault 下副本文件一并删除；电脑端帖子 md 在下载循环中已被 isPostMd 跳过
+        // 历史残留清理（早期误下载的帖子 vault 副本，防止重复条目）
         runCatching { java.io.File(ctx.filesDir, "vault/origin content").deleteRecursively() }
         val dupes = local.filter { it.origin == "vault" && (it.rawMd ?: "").contains("memmos-id:") }
         dupes.forEach { d ->
-            d.originPath?.takeIf { it.isNotBlank() }?.let { p ->
-                runCatching { java.io.File(ctx.filesDir, "vault/$p").delete() }
+            d.originPath?.takeIf { it.isNotBlank() }?.let { pth ->
+                runCatching { java.io.File(ctx.filesDir, "vault/$pth").delete() }
             }
         }
         local.removeAll(dupes)
         if (dupes.isNotEmpty()) android.util.Log.d("MemmosDbg", "清理帖子 vault 重复条目 ${dupes.size} 条")
         lastSyncMsg.value = when {
-            up == 0 && down == 0 ->
-                "两端已一致：没有需要同步的内容（上传 0 · 下载 0 · 已是最新 $skip）"
-            else -> "同步完成：上传 $up · 下载 $down · 已是最新 $skip"
+            up == 0 && deletedRemote == 0 ->
+                "两端一致：手机内容已全部同步到 Obsidian（无变化）"
+            else -> "同步完成：上传 $up 篇 · 清理已删帖子 $deletedRemote 个 · 失败 $skip"
         }
         progress.value = null
         store.save(local)
-        return@withContext Result(up, down, skip)
+        return@withContext Result(up, deletedRemote, skip)
     }
 }
