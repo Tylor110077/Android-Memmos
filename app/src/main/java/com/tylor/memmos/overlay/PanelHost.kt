@@ -128,7 +128,7 @@ fun PanelHost(
         }
         // 初始 -sheetH=完全在顶部上方（隐藏）；首次打开动画过程中才可见
         if (model.sheetOpen.value || sheetAnim.value > -sheetH + 1f) {
-            val closePx = with(density) { 56.dp.toPx() }
+            val closePx = with(density) { 32.dp.toPx() }
             Box(
                 Modifier
                     .align(if (panelOnLeft) Alignment.TopStart else Alignment.TopEnd)
@@ -136,16 +136,23 @@ fun PanelHost(
                     .offset { IntOffset(0, sheetAnim.value.roundToInt()) }
                     .draggable(
                         state = rememberDraggableState { d ->
+                            // 跟手：delta 立即映射到偏移（scope.launch 即刻执行，同帧生效），
+                            // 「手托着它上下」——拖到顶（完全收起位）即收，拖回半程恢复打开态
                             scope.launch {
                                 sheetAnim.stop()
                                 sheetAnim.snapTo((sheetAnim.value + d).coerceIn(-sheetH, 0f))
+                                if (sheetAnim.value <= -sheetH + 1f && model.sheetOpen.value) {
+                                    model.sheetOpen.value = false
+                                } else if (!model.sheetOpen.value && sheetAnim.value > -sheetH / 2f) {
+                                    model.sheetOpen.value = true
+                                }
                             }
                         },
                         orientation = Orientation.Vertical,
                         onDragStarted = { scope.launch { sheetAnim.stop() } },
                         onDragStopped = { v ->
-                            // 向上滑（negative）超 56dp 或甩动 → 收回去；否则回弹展开位
-                            val shouldClose = sheetAnim.value < -closePx || v < -900f
+                            // 灵敏：上滑超 32dp 或 >600px/s 甩动即收；否则回弹展开位
+                            val shouldClose = sheetAnim.value < -closePx || v < -600f
                             if (shouldClose) model.sheetOpen.value = false
                             else scope.launch {
                                 sheetAnim.animateTo(0f, tween(200, easing = FastOutSlowInEasing))

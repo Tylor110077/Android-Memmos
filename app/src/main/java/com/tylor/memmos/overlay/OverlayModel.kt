@@ -9,7 +9,7 @@ import com.tylor.memmos.ui.TabEdge
  */
 class OverlayModel {
     var edge = mutableStateOf(TabEdge.LEFT)
-    var frac = mutableStateOf(0.61f) // 默认位置：一半之上 0.61 左右（用户要求）
+    var frac = mutableStateOf(0.39f) // 默认贴边位置 39%（用户要求）
     var opacity = mutableStateOf(0.92f)
     /** 浮条宽度/长度（dp，独立可调，用户要求「同时设定宽度和长度」） */
     var barWidth = mutableStateOf(5f) // 默认最细 5（用户要求）

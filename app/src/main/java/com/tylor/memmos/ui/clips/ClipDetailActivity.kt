@@ -44,6 +44,8 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.ui.window.DialogWindowProvider
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -611,6 +613,17 @@ private fun FullscreenPlayer(
     var duration by remember { mutableStateOf(0L) }
     var gestureTip by remember { mutableStateOf<GestureTip?>(null) }
     var dragActive by remember { mutableStateOf(false) }
+    // 全屏铺满：横屏时挖孔屏（刘海）在短边（左侧），Dialog 窗口默认不铺进 cutout → 左侧漏缝
+    val dialogWindow = (LocalView.current.parent as? DialogWindowProvider)?.window
+    DisposableEffect(Unit) {
+        dialogWindow?.apply {
+            attributes = attributes.apply {
+                layoutInDisplayCutoutMode =
+                    android.view.WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+            }
+        }
+        onDispose {}
+    }
     LaunchedEffect(vv) {
         vv.setOnPreparedListener { mp ->
             if (startMs > 0) mp.seekTo(startMs.toInt())
@@ -821,7 +834,7 @@ private fun PlayerControlBar(
                     .padding(horizontal = 8.dp, vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                if (fullscreen) IconFullscreenExit(13.dp, Color.White) else IconFullscreen(13.dp, Color.White)
+                if (fullscreen) IconFullscreenExit(15.dp, Color.White) else IconFullscreen(15.dp, Color.White)
                 Spacer(Modifier.width(4.dp))
                 Text(if (fullscreen) "内嵌" else "全屏", color = Color.White, fontSize = 12.sp)
             }
@@ -894,6 +907,17 @@ private fun ImageViewer(ctx: Context, urls: List<String>, initialPage: Int, onDi
     var zoomScale by remember { mutableStateOf(1f) }
     var offset by remember { mutableStateOf(Offset.Zero) }
     LaunchedEffect(pagerState.currentPage) { zoomScale = 1f; offset = Offset.Zero }
+    // 同全屏视频：铺进挖孔屏 cutout（横屏/短边）
+    val dialogWindow = (LocalView.current.parent as? DialogWindowProvider)?.window
+    DisposableEffect(Unit) {
+        dialogWindow?.apply {
+            attributes = attributes.apply {
+                layoutInDisplayCutoutMode =
+                    android.view.WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+            }
+        }
+        onDispose {}
+    }
 
     Dialog(
         onDismissRequest = onDismiss,

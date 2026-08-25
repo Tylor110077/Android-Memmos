@@ -84,13 +84,28 @@ fun IconFullscreen(size: Dp, tint: Color, modifier: Modifier = Modifier) = Glyph
     line(18f, 12f, 18f, 18f, st, tint); line(18f, 18f, 12f, 18f, st, tint)
 }
 
-/** 退出全屏：四角向中心压缩箭头（点退回内嵌） */
+/** 退出全屏「缩小」：四角 L 括号 + 四条从角指向中心的实心箭头（小尺寸下清晰可辨） */
 @Composable
-fun IconFullscreenExit(size: Dp, tint: Color, modifier: Modifier = Modifier) = GlyphIcon(size, tint, modifier) { st ->
-    line(8f, 8f, 12f, 12f, st, tint); line(12f, 12f, 8f, 12f, st, tint)
-    line(16f, 8f, 12f, 12f, st, tint); line(12f, 12f, 16f, 12f, st, tint)
-    line(8f, 16f, 12f, 12f, st, tint); line(12f, 12f, 8f, 13.2f, st, tint)
-    line(16f, 16f, 12f, 12f, st, tint); line(12f, 12f, 16f, 13.2f, st, tint)
+fun IconFullscreenExit(size: Dp, tint: Color, modifier: Modifier = Modifier) = GlyphIcon(size, tint, modifier) { _ ->
+    val st = Stroke(width = 1.9f, cap = StrokeCap.Round, join = StrokeJoin.Round)
+    // 四角 L 括号
+    line(4.6f, 10.2f, 4.6f, 4.6f, st, tint); line(4.6f, 4.6f, 10.2f, 4.6f, st, tint)
+    line(13.8f, 4.6f, 19.4f, 4.6f, st, tint); line(19.4f, 4.6f, 19.4f, 10.2f, st, tint)
+    line(19.4f, 13.8f, 19.4f, 19.4f, st, tint); line(19.4f, 19.4f, 13.8f, 19.4f, st, tint)
+    line(10.2f, 19.4f, 4.6f, 19.4f, st, tint); line(4.6f, 19.4f, 4.6f, 13.8f, st, tint)
+    // 中心四条向心实心箭头（箭头头用填充三角，小尺寸更醒目）
+    drawLine(tint, Offset(10.4f, 10.4f), Offset(6.8f, 6.8f), strokeWidth = st.width, cap = StrokeCap.Round)
+    val t1 = Path().apply { moveTo(6.8f, 6.8f); lineTo(11.2f, 7.1f); lineTo(7.1f, 11.2f); close() }
+    drawPath(t1, tint)
+    drawLine(tint, Offset(13.6f, 10.4f), Offset(17.2f, 6.8f), strokeWidth = st.width, cap = StrokeCap.Round)
+    val t2 = Path().apply { moveTo(17.2f, 6.8f); lineTo(12.8f, 7.1f); lineTo(16.9f, 11.2f); close() }
+    drawPath(t2, tint)
+    drawLine(tint, Offset(10.4f, 13.6f), Offset(6.8f, 17.2f), strokeWidth = st.width, cap = StrokeCap.Round)
+    val t3 = Path().apply { moveTo(6.8f, 17.2f); lineTo(11.2f, 16.9f); lineTo(7.1f, 12.8f); close() }
+    drawPath(t3, tint)
+    drawLine(tint, Offset(13.6f, 13.6f), Offset(17.2f, 17.2f), strokeWidth = st.width, cap = StrokeCap.Round)
+    val t4 = Path().apply { moveTo(17.2f, 17.2f); lineTo(12.8f, 16.9f); lineTo(16.9f, 12.8f); close() }
+    drawPath(t4, tint)
 }
 
 /** 亮度：圆点 + 8 条射线（视频手势提示用，不用 emoji） */

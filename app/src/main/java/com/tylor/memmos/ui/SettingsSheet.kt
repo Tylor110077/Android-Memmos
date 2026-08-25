@@ -29,6 +29,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -83,11 +84,20 @@ fun SettingsSheet(
             // 空白区（无控件处理的手势）tap → 整个退出；滑杆/chip/把手各自消费自己的 tap
             .pointerInput(Unit) { detectTapGestures(onTap = { onDismissAll() }) },
     ) {
-        // 背景：有一点透明的纯黑（用户要求，去掉环境背景图/罩）
+        // 背景：有一点透明的纯黑 + 细横线纹理装饰（用户要求「装饰点线条，多一点也没问题」）
         Box(
             Modifier.fillMaxSize()
                 .clip(RoundedCornerShape(bottomStart = 26.dp, bottomEnd = 26.dp))
-                .background(Color(0xE6000000)),
+                .background(Color(0xE6000000))
+                .drawWithContent {
+                    drawContent()
+                    val step = with(density) { 26.dp.toPx() }
+                    var y = step
+                    while (y < size.height) {
+                        drawLine(Color(0x0AFFFFFF), Offset(0f, y), Offset(size.width, y), strokeWidth = 1f)
+                        y += step
+                    }
+                },
         )
         Column(
             Modifier
@@ -159,7 +169,9 @@ fun SettingsSheet(
                     )
                 }
             }
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(2.dp))
+            Box(Modifier.fillMaxWidth().height(1.dp).background(Color(0x14FFFFFF))) // 分区装饰线
+            Spacer(Modifier.height(10.dp))
             // 配色：滑块本体纯色三选一（绿/白/深灰，用户要求）
             SectionLabel("配 色")
             Spacer(Modifier.height(8.dp))
@@ -176,7 +188,9 @@ fun SettingsSheet(
                 Spacer(Modifier.width(4.dp))
                 ColorChip("深灰", TabColor.DARK, barColor == TabColor.DARK) { onColorChange(TabColor.DARK) }
             }
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(2.dp))
+            Box(Modifier.fillMaxWidth().height(1.dp).background(Color(0x14FFFFFF))) // 分区装饰线
+            Spacer(Modifier.height(10.dp))
             // 滑杆：左右贴边时调纵向位置一致
             SliderRow(
                 label = "贴边位置",
