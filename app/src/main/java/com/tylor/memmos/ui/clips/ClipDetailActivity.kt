@@ -553,8 +553,9 @@ private fun InlineVideoPlayer(file: File, autoplay: Boolean, cover: String? = nu
                         detectTapGestures { if (gestureTip == null && !dragActive) controls = !controls }
                     },
             )
-            // 中央大按钮（用户要求：暂停=大播放键，播放中=大暂停键，点击切换）
-            if (!dragActive) {
+            // 中央大按钮（用户要求：暂停=大播放键，播放中=大暂停键，点击切换；
+            // 与控制栏同显隐——点屏幕收起控制栏时大按钮也一起隐藏）
+            if (controls && !dragActive) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Box(
                         Modifier
