@@ -134,7 +134,6 @@ object XhsDomCapture {
       if (c0 && c0.querySelectorAll('.parent-comment').length > 1) { scope = c0; break; }
     }
   }
-  var commentHtml = scope ? scope.outerHTML.slice(0, 150000) : '';
   return JSON.stringify({title:title,desc:desc,author:author,avatar:avatar,tags:tags,images:images,ogImage:ogImage,video:video,comments:comments,noteId:noteId});
 })()"""
 }

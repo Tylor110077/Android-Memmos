@@ -56,8 +56,6 @@ class FloatingService : Service() {
         val running = MutableStateFlow(false)
         private const val CHANNEL_ID = "memmos_overlay"
         private const val NOTIF_ID = 1001
-        /** 面板占屏宽比例（其余穿透给宿主 App） */
-        const val PANEL_WIDTH_RATIO = 0.86f
     }
 
     private lateinit var wm: WindowManager
@@ -601,7 +599,6 @@ class FloatingService : Service() {
     }
 
     private fun removePanelWindow() {
-        android.util.Log.d("MemmosDbg", "removePanelWindow")
         panelView?.let { v ->
             try { wm.removeView(v) } catch (_: Exception) {}
             v.disposeComposition()

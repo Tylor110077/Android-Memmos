@@ -156,7 +156,6 @@ fun MainTabs(clipCapture: Boolean = false) {
 
     // 剪藏数据：三页共享；ON_RESUME 重载（详情页/外部变化后自动刷新）
     var clips by remember { mutableStateOf(store.load()) }
-    var busy by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
     var tab by remember { mutableStateOf(Tab.CAPTURE) }
     var query by remember { mutableStateOf("") }
@@ -260,7 +259,7 @@ fun MainTabs(clipCapture: Boolean = false) {
             ) {
                 when (tab) {
                     Tab.CAPTURE -> CapturePage(
-                        clips = clips, busy = false, message = message,
+                        clips = clips, message = message,
                         onFetch = { text ->
                             // 统一后台管线（与悬浮窗「抓取当前笔记」同一实现）：避免两套抓取逻辑不一致
                             XhsCaptureService.start(ctx, text)
@@ -391,7 +390,6 @@ private fun IslandItem(t: Tab, selected: Boolean, onClick: (Tab) -> Unit) {
 @Composable
 private fun CapturePage(
     clips: List<ClipNote>,
-    busy: Boolean,
     message: String?,
     onFetch: (String) -> Unit,
     onOpen: (ClipNote) -> Unit,
@@ -490,12 +488,12 @@ private fun CapturePage(
                     .height(52.dp)
                     .clip(RoundedCornerShape(999.dp))
                     .background(BtnPrimaryBg)
-                    .clickable(enabled = !busy) {
+                    .clickable {
                         onFetch(link); link = ""
                     }
                     .padding(horizontal = 20.dp),
                 contentAlignment = Alignment.Center,
-            ) { Text(if (busy) "…" else "抓取", color = BtnPrimaryText, fontSize = 14.sp, fontWeight = FontWeight.Medium) }
+            ) { Text("抓取", color = BtnPrimaryText, fontSize = 14.sp, fontWeight = FontWeight.Medium) }
         }
         message?.let {
             Text(

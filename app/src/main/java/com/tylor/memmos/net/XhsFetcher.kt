@@ -204,11 +204,6 @@ object XhsFetcher {
                 }.filter { it.isNotEmpty() }
             }
         }.getOrDefault(emptyList())
-            .also { if (it.isNotEmpty()) android.util.Log.d(
-                "MemmosDbg",
-                "imgList fallback: n=${it.size} seq=" +
-                    it.joinToString("|") { u -> u.substringAfterLast('/').removePrefix("1040g0k0322n").take(10) },
-            ) }
         else emptyList()
 
         if (noteObj == null) {
