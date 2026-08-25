@@ -202,6 +202,13 @@ fun MainTabs(clipCapture: Boolean = false) {
         if (SyncEngine.progress.value == null) reload()
     }
 
+    // 抓取完成/失败即时刷新剪藏库（主页快速抓取已改走后台管线：完成时页面处于前台
+    // 且没有生命周期事件，之前列表要退出重进才更新——用户反馈「主页抓取后没及时刷新」）
+    val captureState by XhsCaptureService.state.collectAsState()
+    LaunchedEffect(captureState.done) {
+        if (captureState.done != null) reload()
+    }
+
     // 从设置/详情返回时刷新权限与列表
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {

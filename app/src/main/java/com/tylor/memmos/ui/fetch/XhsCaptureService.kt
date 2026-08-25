@@ -75,6 +75,8 @@ class XhsCaptureService : Service() {
     private var noteUrl = ""
     private var attempts = 0
     private var handled = false
+    /** 并发抓取请求排队（第二个请求被静默忽略=漏抓；改为串行处理） */
+    private val pendingQueue = java.util.ArrayDeque<String>()
     private val nm get() = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -85,6 +87,9 @@ class XhsCaptureService : Service() {
             if (text.isBlank()) {
                 state.value = CaptureState(done = false, status = "未识别到链接")
                 stopSelf()
+            } else {
+                // 正在抓另一条：入队排队（原来直接忽略 → 用户的第二条"漏抓"）
+                pendingQueue.add(text)
             }
             return START_NOT_STICKY
         }
@@ -284,11 +289,17 @@ class XhsCaptureService : Service() {
         }
     }
 
+    /** 内容指纹：标题+作者+正文相同视作同一篇（防短链失效/不同入口抓到同内容不同 id 的多抓） */
+    private fun contentKey(n: com.tylor.memmos.data.ClipNote): String =
+        "${n.title}|${n.author}|${(n.desc ?: "").take(160)}"
+
     private fun finish(note: ClipNote) {
         val ok = runCatching {
             val store = ClipStore(this)
             val list = store.load()
-            val merged = (listOf(note) + list.filter { it.id != note.id }).toMutableList()
+            val k = contentKey(note)
+            val merged = (listOf(note) + list.filter { it.id != note.id && contentKey(it) != k })
+                .toMutableList()
             store.save(merged)
             true
         }.getOrDefault(false)
@@ -313,6 +324,18 @@ class XhsCaptureService : Service() {
         stopForeground(false)
         nm.notify(NOTIF_ID, notif(1f, "抓取完成 ✓", done = true))
         handler.postDelayed({ stopSelf() }, 4000)
+        pollPending()
+    }
+
+    /** 串行处理排队中的抓取请求（原来并发请求被直接忽略 → 漏抓） */
+    private fun pollPending() {
+        handler.postDelayed({
+            if (state.value.running) return@postDelayed
+            val next = pendingQueue.pollFirst() ?: return@postDelayed
+            state.value = CaptureState(running = true, progress = 0.05f, status = "准备抓取…", done = null)
+            updateNotif(0.05f, "准备抓取…")
+            startCapture(next)
+        }, 400)
     }
 
     private fun fail(msg: String) {
@@ -321,6 +344,7 @@ class XhsCaptureService : Service() {
         stopForeground(true)
         nm.notify(NOTIF_ID, notif(0f, msg, done = true))
         handler.postDelayed({ stopSelf() }, 3000)
+        pollPending()
     }
 
     private fun update(p: Float, s: String) {
