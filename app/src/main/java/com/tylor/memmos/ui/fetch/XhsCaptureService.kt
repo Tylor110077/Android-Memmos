@@ -329,7 +329,8 @@ class XhsCaptureService : Service() {
     private fun finish(note: ClipNote) {
         android.util.Log.d(
             "MemmosDbg",
-            "save note: ${note.title.take(20)} cover=${(note.imageUrls.firstOrNull() ?: "NONE").take(100)}",
+            "save note: ${note.title.take(20)} imgs=${note.imageUrls.size} first3=" +
+                note.imageUrls.take(3).joinToString(",") { it.substringAfterLast("/").take(14) },
         )
         val ok = runCatching {
             val store = ClipStore(this)
