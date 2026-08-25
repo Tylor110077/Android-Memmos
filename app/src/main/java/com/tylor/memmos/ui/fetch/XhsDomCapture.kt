@@ -1,7 +1,7 @@
 package com.tylor.memmos.ui.fetch
 
 /**
- * 小红书页面 DOM 提取共享定义：ClipFetchActivity（抓取页）与 XhsCaptureService（后台抓取）
+ * 小红书页面 DOM 提取共享定义：XhsCaptureService（后台抓取管线唯一实现）
  * 共用同一套 JS/正则，避免两处漂移。
  */
 object XhsDomCapture {

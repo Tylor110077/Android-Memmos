@@ -76,7 +76,6 @@ class SyncClient(
         }
     }
 
-    suspend fun getFile(path: String): String = JSONObject(call("/api/file?path=$path")).getString("content")
 
     /** 原始响应（md 走 content 字段，二进制走 base64 字段，由调用方区分） */
     suspend fun getFileRaw(path: String): String = call("/api/file?path=$path")

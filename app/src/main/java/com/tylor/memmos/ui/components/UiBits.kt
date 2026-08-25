@@ -43,37 +43,6 @@ import com.tylor.memmos.ui.theme.TextMid
 
 /** 标准玻璃卡：全站卡片统一走这里，改造时勿再手写 fillMaxWidth+GlassFill 组合 */
 @Composable
-fun GlassCard(
-    modifier: Modifier = Modifier,
-    onClick: (() -> Unit)? = null,
-    content: @Composable () -> Unit,
-) {
-    val base = modifier
-        .clip(Shapes.Card)
-        .background(GlassFill)
-        .border(1.dp, GlassStrokeSoft, Shapes.Card)
-    Box(
-        if (onClick != null) base.clickable(onClick = onClick) else base,
-    ) {
-        content()
-    }
-}
-
-/** 分区标题：小节标签（弱提示色 + 字距） */
-@Composable
-fun SectionTitle(text: String, modifier: Modifier = Modifier) {
-    Text(
-        text,
-        fontSize = 11.sp, letterSpacing = 1.6.sp, color = TextFaint,
-        modifier = modifier,
-    )
-}
-
-/**
- * 空态（Notion 式引导）：大描边图标 + 标题 + 说明 + 可选动作按钮。
- * icon: GlyphIcon 绘制的 24x24 图形（draw24 闭包经 GlyphIcon 缩放）。
- */
-@Composable
 fun EmptyState(
     title: String,
     desc: String,

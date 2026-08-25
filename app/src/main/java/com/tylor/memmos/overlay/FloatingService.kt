@@ -204,7 +204,7 @@ class FloatingService : Service() {
             contentAlignment = align,
         ) {
             EdgeTab(
-                edge = e, barWidth = bw, barLength = bl, alpha = a, color = c, dragging = d,
+                barWidth = bw, barLength = bl, alpha = a, color = c, dragging = d,
                 active = panelView != null, // 面板开着时浮条全透明可见，静止态更低调
             )
         }

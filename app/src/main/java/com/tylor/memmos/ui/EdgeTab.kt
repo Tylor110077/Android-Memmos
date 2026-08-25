@@ -38,7 +38,6 @@ enum class TabColor(val body: Color) {
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun EdgeTab(
-    edge: TabEdge,
     barWidth: Float,
     barLength: Float,
     alpha: Float,

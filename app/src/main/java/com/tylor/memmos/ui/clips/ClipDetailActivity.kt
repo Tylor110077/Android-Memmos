@@ -82,8 +82,6 @@ import com.tylor.memmos.ui.IconFullscreen
 import com.tylor.memmos.ui.IconFullscreenExit
 import com.tylor.memmos.ui.IconPause
 import com.tylor.memmos.ui.IconPlayFilled
-import com.tylor.memmos.ui.IconSun
-import com.tylor.memmos.ui.IconVolumeSpeaker
 import com.tylor.memmos.ui.md.MarkdownView
 import com.tylor.memmos.util.AppPrefs
 import com.tylor.memmos.util.MediaSaver

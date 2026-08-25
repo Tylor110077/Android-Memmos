@@ -39,7 +39,7 @@ import org.json.JSONTokener
  * 后台抓取前台服务（用户要求「不跳转、后台完成、悬浮窗显示进度」）：
  * 悬浮窗按钮 → 本服务内跑完整管线（隐藏 WebView 渲染→评论滚动→DOM 提取→
  * XhsFetcher 合并→落库→视频交 VideoSaverService），浮动面板/通知栏实时显示进度条。
- * 页面流程与 ClipFetchActivity 同源（XhsDomCapture 共享 JS）。
+ * 页面流程为唯一抓取管线（XhsDomCapture 共享 JS）。
  */
 class XhsCaptureService : Service() {
 
@@ -105,7 +105,7 @@ class XhsCaptureService : Service() {
         return START_NOT_STICKY
     }
 
-    /* ───────────── 抓取管线（与 ClipFetchActivity 同逻辑） ───────────── */
+    /* ───────────── 抓取管线（唯一实现，主页/悬浮窗共用） ───────────── */
 
     private fun startCapture(text: String) {
         val url = XhsFetcher.extractUrl(text)
@@ -201,10 +201,6 @@ class XhsCaptureService : Service() {
                 JSONObject(inner)
             }.getOrNull()
             if (parsed != null) {
-                // 调试：评论区 HTML 落盘供校准选择器
-                parsed.optString("commentHtml").takeIf { it.isNotBlank() }?.let { dump ->
-                    runCatching { java.io.File(filesDir, "comment_dump.html").writeText(dump) }
-                }
                 val jsVideo = parsed.optString("video").takeIf { it.startsWith("http") }
                 val netVideo = jsVideo ?: videoCandidates.firstOrNull { it.startsWith("http") }
                 val noteId = parsed.optString("noteId").ifBlank {
