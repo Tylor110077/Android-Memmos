@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -33,6 +34,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalContext
 import coil.compose.AsyncImage
 import com.tylor.memmos.data.ClipStore
@@ -67,6 +70,7 @@ fun CapturePanel(
     modifier: Modifier = Modifier,
 ) {
     val ctx = LocalContext.current
+    val density = LocalDensity.current
     val cap by XhsCaptureService.state.collectAsState()
     val paired = remember { SyncPrefs.load(ctx) != null }
     // 抓取完成后刷新最近列表
@@ -91,23 +95,44 @@ fun CapturePanel(
                         color = Color(0xFFF5F7FA), fontSize = 15.sp, fontWeight = FontWeight.Medium,
                         letterSpacing = (-0.3).sp,
                     )
-                    Spacer(Modifier.weight(1f))
-                    Spacer(Modifier.width(10.dp)) // 配对 chip 与标题文本的最小间距（用户反馈太近）
-                    PairedChip(paired)
-                    Spacer(Modifier.width(10.dp))
-                    GlassCircleButton(
-                        size = 40.dp,
-                        content = { IconGear(20.dp, Color.White) },
-                        onClick = { onOpenSettings() },
-                    )
-                    Spacer(Modifier.width(10.dp))
-                    GlassCircleButton(
-                        size = 42.dp,
-                        content = { IconClose(22.dp, Color.White) },
-                        onClick = { onClose() },
-                    )
-                }
-                Spacer(Modifier.height(14.dp))
+                Spacer(Modifier.weight(1f))
+                Spacer(Modifier.width(10.dp)) // 配对 chip 与标题文本的最小间距（用户反馈太近）
+                PairedChip(paired)
+                Spacer(Modifier.width(10.dp))
+                GlassCircleButton(
+                    size = 42.dp,
+                    content = { IconClose(22.dp, Color.White) },
+                    onClick = { onClose() },
+                )
+            }
+            Spacer(Modifier.height(12.dp))
+            // 「浮条设置」把手（用户要求删齿轮按钮）：在最近剪藏上方一条，向下滑展开设置抽屉
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .height(40.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(Color(0x12FFFFFF))
+                    .border(1.dp, Color(0x1FFFFFFF), RoundedCornerShape(14.dp))
+                    .clickable { onOpenSettings() }
+                    .pointerInput(Unit) {
+                        val threshold = with(density) { 36.dp.toPx() }
+                        var total = 0f
+                        detectVerticalDragGestures(
+                            onDragStart = { total = 0f },
+                            onDragEnd = { if (total > threshold) onOpenSettings() },
+                            onVerticalDrag = { change, dy -> total += dy; change.consume() },
+                        )
+                    },
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    "浮条设置",
+                    fontSize = 12.sp, color = TextSoft, fontWeight = FontWeight.Medium,
+                    letterSpacing = 0.5.sp,
+                )
+            }
+            Spacer(Modifier.height(8.dp))
 
                 // 最近剪藏滚动区：止于黄金锚点
                 Column(

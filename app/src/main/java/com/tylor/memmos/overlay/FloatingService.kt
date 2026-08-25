@@ -222,7 +222,7 @@ class FloatingService : Service() {
     private fun throttledTabApply() {
         if (!tabXPending) {
             tabXPending = true
-            main.postDelayed(tabXApply, 32L)
+            main.postDelayed(tabXApply, 16L)
         }
     }
 
@@ -335,7 +335,7 @@ class FloatingService : Service() {
                             val (w, h) = screen()
                             tabLp.x = (baseX + dx).roundToInt().coerceIn(0, w - tabLp.width)
                             tabLp.y = (baseY + dy).roundToInt().coerceIn(0, h - tabLp.height)
-                            throttledTabApply() // 同面板：32ms 合并窗口更新
+                            throttledTabApply() // 同面板：16ms 合并窗口更新
                         }
                         panelDrag -> {
                             updatePanelX(ev.rawX - lastX)
@@ -508,7 +508,7 @@ class FloatingService : Service() {
 
     /** 拖动跟手：增量移动面板窗口 x */
     /** 跟手移动节流：坐标即时写入 lp（松手判定读最新值不受影响），
-     *  窗口 updateViewLayout 合并到 32ms 一次——ColorOS 上每帧移动 overlay 窗口=屏闪（用户反馈） */
+     *  窗口 updateViewLayout 合并到 16ms 一次——ColorOS 上每帧移动 overlay 窗口=屏闪（用户反馈） */
     private var panelXPending = false
     private val panelXApply = Runnable {
         panelXPending = false
@@ -519,7 +519,7 @@ class FloatingService : Service() {
     private fun throttledPanelApply() {
         if (!panelXPending) {
             panelXPending = true
-            main.postDelayed(panelXApply, 32L)
+            main.postDelayed(panelXApply, 16L)
         }
     }
 

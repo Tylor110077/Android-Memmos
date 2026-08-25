@@ -112,47 +112,44 @@ fun PanelHost(
                 .swipeDrag(onDragStart, onDrag, onRelease),
         )
 
-        // 设置抽屉（用户要求：与面板同宽不超浮窗、下滑关闭）；面板保持打开时可见。
-        // 单一 Animatable 自管理滑入/跟手/回弹/滑出——原来「AnimatedVisibility 动画 +
-        // 手拖 offset 双动画叠加」，松手未过阈值时 sheetDrag 瞬间归零（硬跳回）、关闭时与
-        // exit 动画叠加，表现为「抽动」。
-        val sheetAnim = remember { Animatable(0f) }
+        // 设置抽屉（用户要求重构：不是独立卡片——顶部内嵌抽屉，像抽屉一样
+        // 「向下滑在最近剪藏上方展开、向上滑收回」；同窗口内 Compose 位移，零窗口更新）。
+        // 单一 Animatable self-manage：展开 0 / 收回 -sheetH（向上完全收回面板顶部上方）
         val density = LocalDensity.current
-        val sheetHpx = with(density) { LocalConfiguration.current.screenHeightDp.dp.toPx() }
+        val panelHpx = with(density) { LocalConfiguration.current.screenHeightDp.dp.toPx() }
+        val sheetH = panelHpx * 0.78f // 抽屉内容高度（位置/配色/4 滑杆 ≈ 480dp）
+        val sheetAnim = remember { Animatable(-sheetH) }
         val scope = rememberCoroutineScope()
         LaunchedEffect(model.sheetOpen.value) {
             if (model.sheetOpen.value) {
-                if (sheetAnim.value <= 0f) sheetAnim.snapTo(sheetHpx) // 从屏下进入
-                sheetAnim.animateTo(0f, tween(300, easing = FastOutSlowInEasing))
+                sheetAnim.animateTo(0f, tween(280, easing = FastOutSlowInEasing))
             } else {
-                sheetAnim.animateTo(sheetHpx, tween(240)) // 整段滑出（同一值，与 offset 无冲突）
+                sheetAnim.animateTo(-sheetH, tween(220))
             }
         }
-        // 只在「明确打开过」后渲染：sheetAnim 初始 0 < 屏高，旧条件会让抽屉在面板首帧
-        // 就渲染出来（offset 0 盖住面板），而其 GenericShape 描边在 0 尺寸帧会崩溃
-        if (model.sheetOpen.value || sheetAnim.value > 0f) {
+        // 初始 -sheetH=完全在顶部上方（隐藏）；首次打开动画过程中才可见
+        if (model.sheetOpen.value || sheetAnim.value > -sheetH + 1f) {
             val closePx = with(density) { 56.dp.toPx() }
             Box(
                 Modifier
-                    // 贴底抽屉：0.84 高从底部对齐（自管理动画后不再有 align(Center) 垂直居中；
-                    // 默认 TopStart 会顶到屏幕顶——用户反馈）
-                    .align(if (panelOnLeft) Alignment.BottomStart else Alignment.BottomEnd)
+                    .align(if (panelOnLeft) Alignment.TopStart else Alignment.TopEnd)
                     .fillMaxWidth(0.86f)
                     .offset { IntOffset(0, sheetAnim.value.roundToInt()) }
                     .draggable(
                         state = rememberDraggableState { d ->
                             scope.launch {
                                 sheetAnim.stop()
-                                sheetAnim.snapTo((sheetAnim.value + d).coerceAtLeast(0f))
+                                sheetAnim.snapTo((sheetAnim.value + d).coerceIn(-sheetH, 0f))
                             }
                         },
                         orientation = Orientation.Vertical,
                         onDragStarted = { scope.launch { sheetAnim.stop() } },
                         onDragStopped = { v ->
-                            // 短滑即收：56dp 位移或 900px/s 甩动；回弹走同一 Animatable，平滑无抽动
-                            if (sheetAnim.value > closePx || v > 900f) model.sheetOpen.value = false
+                            // 向上滑（negative）超 56dp 或甩动 → 收回去；否则回弹展开位
+                            val shouldClose = sheetAnim.value < -closePx || v < -900f
+                            if (shouldClose) model.sheetOpen.value = false
                             else scope.launch {
-                                sheetAnim.animateTo(0f, tween(220, easing = FastOutSlowInEasing))
+                                sheetAnim.animateTo(0f, tween(200, easing = FastOutSlowInEasing))
                             }
                         },
                     ),

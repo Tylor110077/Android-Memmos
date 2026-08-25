@@ -72,31 +72,35 @@ fun SettingsSheet(
     modifier: Modifier = Modifier,
 ) {
     val density = LocalDensity.current
-    // 描边只走两侧竖线 + 顶部两角圆弧，底部直线不描（用户要求下边框透明）。
-    // 不用 Modifier.border(GenericShape)：通用形状描边走 Bitmap 缓存，尺寸为 0 的帧会崩
-    // （真机复现：width and height must be > 0）；自绘 Path 无缓存、0 尺寸安全。
+    // 顶部内嵌抽屉样式（用户要求）：从面板顶部向下滑出，**底边两角圆角**；描边走两侧竖线 +
+    // 底部两角圆弧，顶部直线不描（与把手衔接）。不用 Modifier.border(GenericShape)：通用形状
+    // 描边走 Bitmap 缓存，尺寸为 0 的帧会崩；自绘 Path 无缓存、0 尺寸安全。
     val borderR = with(density) { 26.dp.toPx() }
     Box(
         modifier
             .fillMaxWidth()
-            .fillMaxHeight(0.84f)
+            .fillMaxHeight(0.78f)
             // 空白区（无控件处理的手势）tap → 整个退出；滑杆/chip/把手各自消费自己的 tap
             .pointerInput(Unit) { detectTapGestures(onTap = { onDismissAll() }) },
     ) {
         // 背景：有一点透明的纯黑（用户要求，去掉环境背景图/罩）
-        Box(Modifier.fillMaxSize().background(Color(0xE6000000)))
+        Box(
+            Modifier.fillMaxSize()
+                .clip(RoundedCornerShape(bottomStart = 26.dp, bottomEnd = 26.dp))
+                .background(Color(0xE6000000)),
+        )
         Column(
             Modifier
                 .fillMaxSize()
                 .drawWithContent {
                     drawContent()
                     val p = Path().apply {
-                        moveTo(0f, size.height)
-                        lineTo(0f, borderR)
-                        arcTo(Rect(0f, 0f, borderR * 2f, borderR * 2f), 180f, 90f, false) // 顶左角
-                        lineTo(size.width - borderR, 0f)
-                        arcTo(Rect(size.width - borderR * 2f, 0f, size.width, borderR * 2f), 270f, 90f, false) // 顶右角
-                        lineTo(size.width, size.height)
+                        moveTo(0f, 0f)
+                        lineTo(0f, size.height - borderR)
+                        arcTo(Rect(0f, size.height - borderR * 2f, borderR * 2f, size.height), 270f, 90f, false) // 底左角
+                        lineTo(size.width - borderR, size.height)
+                        arcTo(Rect(size.width - borderR * 2f, size.height - borderR * 2f, size.width, size.height), 0f, 90f, false) // 底右角
+                        lineTo(size.width, 0f)
                     }
                     drawPath(p, Color(0x26FFFFFF), style = Stroke(1.dp.toPx()))
                 }
