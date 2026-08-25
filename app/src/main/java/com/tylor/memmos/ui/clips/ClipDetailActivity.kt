@@ -492,7 +492,7 @@ private fun InlineVideoPlayer(file: File, autoplay: Boolean, cover: String? = nu
             properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
         ) {
             FullscreenPlayer(
-                file = file, startMs = position, audio = audio, activity = activity,
+                file = file, startMs = position, activity = activity,
                 onSeek = { position = it }, onDuration = { duration = it },
                 onExit = { exitFullscreen() },
             )
@@ -588,7 +588,7 @@ private fun InlineVideoPlayer(file: File, autoplay: Boolean, cover: String? = nu
 @Composable
 private fun FullscreenPlayer(
     file: File, startMs: Long,
-    audio: AudioManager, activity: ComponentActivity?,
+    activity: ComponentActivity?,
     onSeek: (Long) -> Unit, onDuration: (Long) -> Unit,
     onExit: () -> Unit,
 ) {
