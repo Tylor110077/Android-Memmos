@@ -112,8 +112,17 @@ fun SettingsSheet(
         Spacer(Modifier.height(14.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Text("浮条设置", fontSize = 16.5.sp, fontWeight = FontWeight.Bold, color = TextHi)
-            Text("完成", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color(0xFF6EE7B7),
-                modifier = Modifier.clickable { onDismiss() })
+            // 玻璃胶囊：命中区比文字大——原来裸露文字点击偏出边缘会被根层「点空白→整退」捕获，
+            // 面板+抽屉一起消失产生抽搐感
+            Text(
+                "完成", fontSize = 13.sp, fontWeight = FontWeight.Medium, color = Color(0xE6FFFFFF),
+                modifier = Modifier
+                    .clip(RoundedCornerShape(999.dp))
+                    .background(Color(0x1AFFFFFF))
+                    .border(1.dp, Color(0x26FFFFFF), RoundedCornerShape(999.dp))
+                    .clickable { onDismiss() }
+                    .padding(horizontal = 14.dp, vertical = 7.dp),
+            )
         }
         Spacer(Modifier.height(16.dp))
 
