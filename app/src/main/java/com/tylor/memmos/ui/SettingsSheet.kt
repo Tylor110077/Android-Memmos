@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
@@ -38,12 +39,13 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.tylor.memmos.ui.components.AmbientBackdrop
 import com.tylor.memmos.ui.theme.AccentBrush
-import com.tylor.memmos.ui.theme.AccentGreen
-import com.tylor.memmos.ui.theme.GlassStrokeSoft
+import com.tylor.memmos.ui.theme.IslandFill
 import com.tylor.memmos.ui.theme.TextFaint
 import com.tylor.memmos.ui.theme.TextHi
 import com.tylor.memmos.ui.theme.TextMid
+import com.tylor.memmos.ui.theme.TextSoft
 
 /**
  * 浮条设置抽屉（设计稿场景 06）。
@@ -64,14 +66,19 @@ fun SettingsSheet(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(
+    Box(
         modifier
             .fillMaxWidth()
-            .fillMaxHeight(0.84f)
-            .background(Brush.verticalGradient(listOf(Color(0xF31E212B), Color(0xFA0F1117))))
-            .border(1.dp, GlassStrokeSoft, RoundedCornerShape(topStart = 26.dp, topEnd = 26.dp))
-            .padding(horizontal = 20.dp, vertical = 18.dp),
+            .fillMaxHeight(0.84f),
     ) {
+        // 环境背景：与主界面/面板同一片环境光（模板 Ambient Background）
+        AmbientBackdrop(Modifier.fillMaxSize(), alpha = 0.42f)
+        Column(
+            Modifier
+                .fillMaxSize()
+                .border(1.dp, Color(0x26FFFFFF), RoundedCornerShape(topStart = 26.dp, topEnd = 26.dp))
+                .padding(horizontal = 20.dp, vertical = 18.dp),
+        ) {
         // 把手
         Box(
             Modifier.size(width = 34.dp, height = 4.dp)
@@ -95,11 +102,18 @@ fun SettingsSheet(
                 PositionWidget(edge, frac, barWidth, barLength)
                 Spacer(Modifier.width(15.dp))
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        EdgeChip("左缘", edge == TabEdge.LEFT) { onEdgeChange(TabEdge.LEFT) }
-                        Spacer(Modifier.width(8.dp))
-                        EdgeChip("右缘", edge == TabEdge.RIGHT) { onEdgeChange(TabEdge.RIGHT) }
-                    }
+            // 分段控件（模板 Mesh/Depth：黑 30% 胶囊容器 + 选中白胶囊黑字）
+            Row(
+                Modifier
+                    .clip(RoundedCornerShape(999.dp))
+                    .background(IslandFill)
+                    .border(1.dp, Color(0x26FFFFFF), RoundedCornerShape(999.dp))
+                    .padding(4.dp),
+            ) {
+                EdgeChip("左缘", edge == TabEdge.LEFT) { onEdgeChange(TabEdge.LEFT) }
+                Spacer(Modifier.width(4.dp))
+                EdgeChip("右缘", edge == TabEdge.RIGHT) { onEdgeChange(TabEdge.RIGHT) }
+            }
                     Text(
                         "位置 ${(frac * 100).toInt()}%\n长按滑块拖拽可在左右缘间切换（震动提示）。",
                         fontSize = 11.sp, lineHeight = 19.sp, color = TextMid,
@@ -130,13 +144,14 @@ fun SettingsSheet(
             ) { onOpacityChange(0.4f + it * 0.6f) }
             Spacer(Modifier.height(10.dp))
         }
+        }
     }
 }
 
 
 @Composable
 private fun SectionLabel(text: String) {
-    Text(text, fontSize = 11.sp, letterSpacing = 1.6.sp, color = TextFaint)
+    Text(text, fontSize = 11.sp, letterSpacing = 1.6.sp, color = TextSoft)
 }
 
 /** 手机轮廓示意图（只保留一条真实演示条；方向切换在下方「左缘/右缘」控制） */
@@ -172,17 +187,16 @@ private fun PositionWidget(
     }
 }
 
-/** 贴边方向分段按钮（只保留左右，用户要求） */
+/** 贴边方向分段按钮（模板 seg-btn：选中白底黑字，未选中白/60） */
 @Composable
 private fun EdgeChip(label: String, selected: Boolean, onSelect: () -> Unit) {
     Text(
         label,
-        fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
-        color = if (selected) Color.White else TextMid,
+        fontSize = 12.sp, fontWeight = FontWeight.Medium,
+        color = if (selected) Color(0xFF09090B) else TextSoft,
         modifier = Modifier
             .clip(RoundedCornerShape(999.dp))
-            .background(if (selected) AccentGreen else Color(0x14FFFFFF))
-            .border(1.dp, if (selected) AccentGreen else Color(0x33FFFFFF), RoundedCornerShape(999.dp))
+            .background(if (selected) Color.White else Color.Transparent)
             .clickable { onSelect() }
             .padding(horizontal = 14.dp, vertical = 7.dp),
     )

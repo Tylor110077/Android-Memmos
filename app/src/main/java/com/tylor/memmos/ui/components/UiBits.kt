@@ -112,7 +112,7 @@ fun PillAction(text: String, onClick: () -> Unit) {
         fontSize = 12.sp, color = AccentGreenSoft, fontWeight = FontWeight.SemiBold,
         modifier = Modifier
             .clip(Shapes.Pill)
-            .background(Color(0x1A8B7BFF))
+            .background(Color(0x2E10B981))
             .clickable(onClick = onClick)
             .padding(horizontal = 14.dp, vertical = 7.dp),
     )

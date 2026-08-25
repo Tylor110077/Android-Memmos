@@ -28,7 +28,7 @@ val AccentGreenSoft = Color(0xFF6EE7B7) // 绿的浅调：链接/高亮文字
 /** 品牌强调：同一绿的轻微双调渐变（视觉立体但仍是单色系） */
 val AccentBrush = Brush.linearGradient(listOf(Color(0xFF10B981), Color(0xFF34D399)))
 
-val Ink = Color(0xFF101218) // 屏幕底色
+val Ink = Color(0xFF000000) // 屏幕底色（官方源 Canvas #000000）
 
 /* 玻璃层：半透明白 + 高光描边 */
 val GlassHi = Color(0x24FFFFFF) // 渐变上端白 .14
@@ -36,6 +36,20 @@ val GlassLo = Color(0x0DFFFFFF) // 渐变下端白 .05
 val GlassFill = Color(0x0DFFFFFF) // 卡片填充白 .05
 val GlassStroke = Color(0x29FFFFFF) // 描边白 .16
 val GlassStrokeSoft = Color(0x17FFFFFF) // 更弱的分隔线白 .09
+
+/* ── Vision Engine 玻璃发丝壳（gs-card 官方配方，来自模板 index.html）──
+ * 外层：1px padding 露出渐变发丝（from-white/40 via-white/5 to-white/10 × opacity .7）；
+ * 内层：bg-black/10 玻璃面（视觉上透出底层环境光，模糊由环境背景承担）。 */
+val ShellHi = Color(0x47FFFFFF) // .28 高光角（左上）
+val ShellMid = Color(0x0DFFFFFF) // .05 过渡
+val ShellLo = Color(0x1AFFFFFF) // .10 低光角（右下）
+val ShellGradient = Brush.linearGradient(listOf(ShellHi, ShellMid, ShellLo)) // 大卡 23px 发丝壳
+val ShellGradientDim = Brush.linearGradient(listOf(Color(0x2EFFFFFF), Color(0x0DFFFFFF), Color(0x00000000))) // 小卡/列表行发丝壳
+val VisionSurface = Color(0x1A000000) // 内层玻璃面 bg-black/10
+val IslandFill = Color(0x8C000000) // 岛屿底栏黑 55%
+val TextSoft = Color(0x80FFFFFF) // white/50（模板次级正文）
+val TextGhost = Color(0x4DFFFFFF) // white/30（模板弱提示）
+val RingWhite = Color(0x1FFFFFFF) // ring-1 white/10~12（头像/缩略图描边）
 
 /* 文字三级 */
 val TextHi = Color(0xFFF2F4F8)
@@ -65,10 +79,11 @@ val CoverGradients = listOf(
 
 /* ───────── 样式规范 v4（参考 Linear/Raycast/Notion/Apple HIG） ───────── */
 
-/** 圆角体系：28 面板 / 16 卡片 / 12 次级容器 / 999 胶囊 */
+/** 圆角体系（官方源家族：12/16/23/24/48/9999）：28 面板 / 23 大卡 / 16 卡 / 12 次级容器 / 999 胶囊 */
 object Shapes {
     val Panel = RoundedCornerShape(28.dp)
-    val Card = RoundedCornerShape(12.dp)
+    val Card = RoundedCornerShape(16.dp)
+    val Tile = RoundedCornerShape(23.dp) // 官方主卡 radius 23px
     val Sub = RoundedCornerShape(12.dp)
     val Pill = RoundedCornerShape(999.dp)
 }

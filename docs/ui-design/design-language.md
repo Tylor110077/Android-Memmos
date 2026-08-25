@@ -67,3 +67,26 @@
 ## 6. 图标
 
 自绘线性风格：24 视口 · stroke 1.8–2f · 圆头圆角（`ui/Icons.kt`），不引入图标库。
+
+## 7. Vision Engine 全量还原（v4.1 · 2026-08-25）
+
+> 依据：docs/vechooool/vision-engine-scan-console/（用户购买后提供的官方包：design.md /
+> index.html / design.html / preview.jpg / assets）。本次按 **index.html 实际落地配方**而非只按
+> design.md 概括，逐项照搬/折算：
+
+| 模板配方（index.html class） | App 落点 | 实现 |
+|------|------|------|
+| Ambient Background：`img opacity-60 mix-blend-screen blur(4px)` + `from-black/50 via-black/10 to-black/80` | 主界面/悬浮面板/设置抽屉底 | `AmbientBackdrop()`：官方资产图 `res/drawable-nodpi/ambient_glow.jpg`（alpha .42）+ 三段纵向渐变罩 |
+| gs-card 渐变发丝壳：外层 1px padding 露出 `from-white/40 via-white/5 to-white/10`（opacity .7），内层 `bg-black/10 backdrop-blur-2xl rounded-23` | 全部卡片/行卡 | `VisionCard()`（23px 大卡）/ `VisionRowCard()`（16px 行卡）：壳=ShellGradient，内层=VisionSurface 黑 .10；模糊由环境底承担 |
+| Floating Island Navigation：发丝壳 + `bg-black/55 blur-2xl p-1.5`；激活项=白胶囊图标+标签展开，未激活=圆形玻璃图标 white/50 | 底栏 | `IslandBar()`/`IslandItem()`：IconScan/IconGrid/IconGear 矢量图标，白胶囊 `animateDpAsState` 展开标签 |
+| Segmented（Mesh/Depth）：容器 `bg-black/30 border-white/10 p-1 rounded-full`，选中白底黑字 | 浮条设置「左缘/右缘」 | `EdgeChip` 选中=白胶囊黑字，未选中=white/60 |
+| Header 圆钮 `w-9 h-9 bg-white/10 border-white/20` | 面板设置/关闭钮 | `GlassCircleButton()` |
+| 主按钮：宽幅 CTA 白色 rounded-2xl(16) `shadow-black/30`；小动作白胶囊（Execute） | CtaButton=白底黑字 16dp；抓取/配对=白胶囊 | `BtnPrimaryBg/BtnPrimaryText` |
+| 列表行：缩略图 44dp rounded-xl `ring-1 white/10` · 标题 white/95 正文 · 副行 white/50 · 尾部状态icon | 剪藏行/同步行/最近行 | ClipRow/RecentRow/SyncFileRow 统一 VisionRowCard + RingWhite 描边环 + 视频角标 |
+| eyebrow：`text-xs uppercase tracking-widest white/50` | 分区标签 | SectionLabel 11sp / 2.4sp 字距 / TextSoft |
+| headline-lg：Roboto 30/300/-0.025em | 页面标题 | PageTitle 24sp Light -0.6sp + 品牌绿短下划线（保留 App 标识） |
+| 圆角家族 12/16/23/24/48/9999 · 4px 节奏 | Shapes：Panel 28 / Tile 23 / Card 16 / Sub 12 / Pill 999 | — |
+| Canvas #000000 · 文字 white/95 / 50 / 30 · Secondary #EF4444=语义红 · Accent #10B981 | Ink=#000000；TextHi / TextSoft(50) / TextGhost(30) | — |
+
+**不照搬**（手机工具 App 无对应物）：88px 分节节奏、桌面网格、GSAP 滚动编舞、Solar 图标库、
+设备白框容器（sm:shadow 白圈）、首页 indicator 横条（系统手势条已有）。

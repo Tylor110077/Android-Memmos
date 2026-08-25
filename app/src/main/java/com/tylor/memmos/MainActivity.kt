@@ -39,7 +39,9 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.material3.LocalTextStyle
@@ -96,20 +98,33 @@ import com.tylor.memmos.ui.fetch.ClipFetchActivity
 import com.tylor.memmos.ui.fetch.XhsCaptureService
 import com.tylor.memmos.ui.login.XhsLoginActivity
 import com.tylor.memmos.ui.viewer.FileViewerActivity
+import com.tylor.memmos.ui.IconGear
+import com.tylor.memmos.ui.IconGrid
+import com.tylor.memmos.ui.IconPlayFilled
+import com.tylor.memmos.ui.IconScan
+import com.tylor.memmos.ui.components.AmbientBackdrop
+import com.tylor.memmos.ui.components.VisionCard
+import com.tylor.memmos.ui.components.VisionRowCard
 import com.tylor.memmos.ui.theme.AccentBrush
 import com.tylor.memmos.ui.theme.BtnPrimaryBg
 import com.tylor.memmos.ui.theme.BtnPrimaryText
 import com.tylor.memmos.ui.theme.AccentGreen
 import com.tylor.memmos.ui.theme.ChipBg
+import com.tylor.memmos.ui.theme.ChipText
 import com.tylor.memmos.ui.theme.GlassFill
 import com.tylor.memmos.ui.theme.GlassStroke
 import com.tylor.memmos.ui.theme.GlassStrokeSoft
 import com.tylor.memmos.ui.theme.Ink
+import com.tylor.memmos.ui.theme.IslandFill
 import com.tylor.memmos.ui.theme.MemmosTheme
+import com.tylor.memmos.ui.theme.RingWhite
+import com.tylor.memmos.ui.theme.ShellGradientDim
 import com.tylor.memmos.ui.theme.Success
 import com.tylor.memmos.ui.theme.TextFaint
+import com.tylor.memmos.ui.theme.TextGhost
 import com.tylor.memmos.ui.theme.TextHi
 import com.tylor.memmos.ui.theme.TextMid
+import com.tylor.memmos.ui.theme.TextSoft
 import kotlin.math.roundToInt
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -223,122 +238,138 @@ fun MainTabs(sharedText: String?, clipCapture: Boolean = false) {
         onDispose { lifecycleOwner.lifecycle.removeObserver(obs) }
     }
 
-    Scaffold(
-        containerColor = Ink,
-        bottomBar = {
-            // 自绘底栏：Material3 NavigationBar 内容按 80dp 排布，压到 56dp 会裁掉图标/标签；
-            // 自绘 Row 完全控制高度与排版（选中态：图标红 + 标签白加粗）
-            // 纯图标底栏：圆形涟漪（无方形触发）+ 单选圆指标平滑滑动（用户要求）
-            var barW by remember { mutableStateOf(0) }
-            val density = LocalDensity.current
-            val pillPx = with(density) { 42.dp.toPx() }
-            val pillY = with(density) { ((60.dp.toPx() - pillPx) / 2f).roundToInt() }
-            val tileW = if (barW > 0) barW / 3f else 0f
-            val animIdx by animateFloatAsState(
-                tab.ordinal.toFloat(),
-                tween(220, easing = FastOutSlowInEasing),
-                label = "tabPill",
-            )
-            Box(
-                Modifier
-                    .fillMaxWidth()
-                    .height(60.dp)
-                    .background(Color(0xFF16181F))
-                    .onSizeChanged { barW = it.width },
-            ) {
-                // 滑动圆指标：浮动层不参与布局（原在 Row 内会占宽把图标推偏）
-                if (tileW > 0f) {
-                    Box(
-                        Modifier
-                            .offset {
-                                IntOffset(
-                                    (animIdx * tileW + (tileW - pillPx) / 2f).roundToInt(),
-                                    pillY,
-                                )
+    Box(Modifier.fillMaxSize()) {
+        // 环境背景（模板 Ambient Background：光斑图低透明 + 三段渐变罩），三页共用一片环境光
+        AmbientBackdrop(Modifier.fillMaxSize())
+        Scaffold(
+            containerColor = Color.Transparent,
+            bottomBar = { IslandBar(tab) { tab = it } },
+        ) { pad ->
+            Box(Modifier.padding(pad)) {
+                when (tab) {
+                    Tab.CAPTURE -> CapturePage(
+                        clips = clips, busy = false, message = message,
+                        onFetch = { text ->
+                            ctx.startActivity(
+                                Intent(ctx, ClipFetchActivity::class.java).putExtra(ClipFetchActivity.EXTRA_TEXT, text),
+                            )
+                        },
+                        onOpen = { ctx.startActivity(Intent(ctx, ClipDetailActivity::class.java).putExtra("id", it.id)) },
+                    )
+                    Tab.LIBRARY -> LibraryPage(
+                        ctx = ctx,
+                        clips = clips, query = query, onQuery = { query = it },
+                        onOpen = { ctx.startActivity(Intent(ctx, ClipDetailActivity::class.java).putExtra("id", it.id)) },
+                        onDelete = { remove(it) },
+                        onDeleteMany = { removeMany(it) },
+                        onOpenFile = { f ->
+                            val rel = f.relativeTo(java.io.File(ctx.filesDir, "vault")).path.replace('\\', '/')
+                            ctx.startActivity(Intent(ctx, FileViewerActivity::class.java).putExtra("path", rel))
+                        },
+                        onUploadNotes = { notes ->
+                            val c = SyncPrefs.load(ctx)
+                            if (c == null) {
+                                message = "尚未配对：请先在设置页完成设备配对"
+                            } else {
+                                scope.launch {
+                                    runCatching { SyncEngine.uploadNotes(ctx, c, notes) }
+                                        .onSuccess { up -> message = "已上传 $up 篇到 Obsidian" }
+                                        .onFailure { message = "${it.javaClass.simpleName}: ${it.message}" }
+                                }
                             }
-                            .size(42.dp)
-                            .background(Color(0x2E10B981), CircleShape),
+                        },
+                    )
+                    Tab.SETTINGS -> SettingsPage(
+                        message = message,
+                        onMessage = { message = it },
+                        onSync = { c ->
+                            scope.launch {
+                                runCatching { SyncEngine.sync(ctx, c) }
+                                    .onSuccess { r ->
+                                        reload() // 同步完成立即刷新剪藏库（原来要等 ON_RESUME，需退出笔记才更新）
+                                        message = "同步完成：上传 ${r.uploaded} · 下载 ${r.downloaded} · 已是最新 ${r.skipped}"
+                                    }
+                                    .onFailure {
+                                        reload() // 部分成功也尽量刷新
+                                        message = "${it.javaClass.simpleName}: ${it.message}"
+                                    }
+                            }
+                        },
                     )
                 }
-                Row(Modifier.fillMaxWidth().height(60.dp)) {
-                    Tab.entries.forEach { t ->
-                        val selected = tab == t
-                        val glyph = when (t) {
-                            Tab.CAPTURE -> "⌖"
-                            Tab.LIBRARY -> "☰"
-                            Tab.SETTINGS -> "⚙"
-                        }
-                        Box(
-                            Modifier
-                                .weight(1f)
-                                .fillMaxHeight()
-                                .clip(CircleShape) // 涟漪随圆形边界（去掉方形触发）
-                                .clickable { tab = t },
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Text(
-                                glyph,
-                                fontSize = 24.sp,
-                                color = if (selected) Color.White else TextFaint,
-                            )
-                        }
-                    }
-                }
             }
-        },
-    ) { pad ->
-        Box(Modifier.padding(pad)) {
-            when (tab) {
-                Tab.CAPTURE -> CapturePage(
-                    clips = clips, busy = false, message = message,
-                    onFetch = { text ->
-                        ctx.startActivity(
-                            Intent(ctx, ClipFetchActivity::class.java).putExtra(ClipFetchActivity.EXTRA_TEXT, text),
-                        )
-                    },
-                    onOpen = { ctx.startActivity(Intent(ctx, ClipDetailActivity::class.java).putExtra("id", it.id)) },
-                )
-                Tab.LIBRARY -> LibraryPage(
-                    ctx = ctx,
-                    clips = clips, query = query, onQuery = { query = it },
-                    onOpen = { ctx.startActivity(Intent(ctx, ClipDetailActivity::class.java).putExtra("id", it.id)) },
-                    onDelete = { remove(it) },
-                    onDeleteMany = { removeMany(it) },
-                    onOpenFile = { f ->
-                        val rel = f.relativeTo(java.io.File(ctx.filesDir, "vault")).path.replace('\\', '/')
-                        ctx.startActivity(Intent(ctx, FileViewerActivity::class.java).putExtra("path", rel))
-                    },
-                    onUploadNotes = { notes ->
-                        val c = SyncPrefs.load(ctx)
-                        if (c == null) {
-                            message = "尚未配对：请先在设置页完成设备配对"
-                        } else {
-                            scope.launch {
-                                runCatching { SyncEngine.uploadNotes(ctx, c, notes) }
-                                    .onSuccess { up -> message = "已上传 $up 篇到 Obsidian" }
-                                    .onFailure { message = "${it.javaClass.simpleName}: ${it.message}" }
-                            }
-                        }
-                    },
-                )
-                Tab.SETTINGS -> SettingsPage(
-                    message = message,
-                    onMessage = { message = it },
-                    onSync = { c ->
-                        scope.launch {
-                            runCatching { SyncEngine.sync(ctx, c) }
-                                .onSuccess { r ->
-                                    reload() // 同步完成立即刷新剪藏库（原来要等 ON_RESUME，需退出笔记才更新）
-                                    message = "同步完成：上传 ${r.uploaded} · 下载 ${r.downloaded} · 已是最新 ${r.skipped}"
-                                }
-                                .onFailure {
-                                    reload() // 部分成功也尽量刷新
-                                    message = "${it.javaClass.simpleName}: ${it.message}"
-                                }
-                        }
-                    },
-                )
+        }
+    }
+}
+
+/**
+ * 岛屿底栏（模板 Floating Island Navigation）：
+ * 渐变发丝壳 + 黑 55% 玻璃胶囊；选中项展开为白色胶囊（图标+标签），未选中为圆形玻璃图标。
+ * 标签动画用宽度过渡（模板 300ms 展开），选中项黑字白底与主按钮同族。
+ */
+@Composable
+private fun IslandBar(tab: Tab, onTab: (Tab) -> Unit) {
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 10.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Box(
+            Modifier
+                .clip(RoundedCornerShape(999.dp))
+                .background(ShellGradientDim)
+                .padding(1.dp),
+        ) {
+            Row(
+                Modifier
+                    .clip(RoundedCornerShape(999.dp))
+                    .background(IslandFill)
+                    .padding(5.dp),
+                horizontalArrangement = Arrangement.spacedBy(2.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Tab.entries.forEach { t -> IslandItem(t, tab == t, onTab) }
             }
+        }
+    }
+}
+
+@Composable
+private fun IslandItem(t: Tab, selected: Boolean, onClick: (Tab) -> Unit) {
+    val bg by animateColorAsState(
+        if (selected) Color.White else Color.Transparent,
+        tween(220, easing = FastOutSlowInEasing),
+        label = "islandBg",
+    )
+    val hPad by animateDpAsState(
+        if (selected) 14.dp else 0.dp,
+        tween(220, easing = FastOutSlowInEasing),
+        label = "islandPad",
+    )
+    val tint = if (selected) Color(0xFF09090B) else TextSoft
+    Row(
+        Modifier
+            .height(44.dp)
+            .clip(RoundedCornerShape(999.dp))
+            .background(bg)
+            .clickable { onClick(t) }
+            .padding(horizontal = hPad),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(Modifier.size(36.dp), contentAlignment = Alignment.Center) {
+            when (t) {
+                Tab.CAPTURE -> IconScan(20.dp, tint)
+                Tab.LIBRARY -> IconGrid(20.dp, tint)
+                Tab.SETTINGS -> IconGear(20.dp, tint)
+            }
+        }
+        if (selected) {
+            Spacer(Modifier.width(4.dp))
+            Text(
+                t.label,
+                fontSize = 12.sp, fontWeight = FontWeight.Medium, color = Color(0xFF09090B),
+            )
         }
     }
 }
@@ -381,26 +412,24 @@ private fun CapturePage(
         PageTitle("Memmos 捕捉")
         Text(
             "悬浮窗速抓 · 剪藏库 · Obsidian 双向同步",
-            fontSize = 12.sp, color = TextFaint,
+            fontSize = 12.sp, color = TextSoft,
             modifier = Modifier.padding(top = 6.dp, bottom = 10.dp),
         )
         CaptureProgressCard()
         Spacer(Modifier.height(24.dp))
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .background(GlassFill, RoundedCornerShape(12.dp))
-                .border(1.dp, GlassStrokeSoft, RoundedCornerShape(12.dp))
-                .padding(horizontal = 14.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Box(Modifier.size(7.dp).background(if (canDraw) Success else Color(0xFFFF2E4D), CircleShape))
-            Spacer(Modifier.width(9.dp))
-            Text(
-                if (canDraw) "悬浮窗权限 已授予" else "悬浮窗权限 未授予",
-                fontSize = 13.sp, color = TextHi.copy(alpha = 0.88f),
-            )
-            Spacer(Modifier.weight(1f))
+        VisionRowCard(Modifier.fillMaxWidth(), radius = 16.dp) {
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(Modifier.size(7.dp).background(if (canDraw) Success else Color(0xFFFF2E4D), CircleShape))
+                Spacer(Modifier.width(9.dp))
+                Text(
+                    if (canDraw) "悬浮窗权限 已授予" else "悬浮窗权限 未授予",
+                    fontSize = 13.sp, color = TextHi.copy(alpha = 0.88f),
+                )
+                Spacer(Modifier.weight(1f))
+            }
         }
         Spacer(Modifier.height(12.dp))
         when {
@@ -441,20 +470,20 @@ private fun CapturePage(
                     focusedTextColor = TextHi,
                     unfocusedTextColor = TextHi,
                 ),
-                shape = RoundedCornerShape(12.dp),
+                shape = RoundedCornerShape(16.dp),
                 modifier = Modifier.weight(1f),
             )
             Box(
                 Modifier
                     .height(52.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(AccentBrush)
+                    .clip(RoundedCornerShape(999.dp))
+                    .background(BtnPrimaryBg)
                     .clickable(enabled = !busy) {
                         onFetch(link); link = ""
                     }
-                    .padding(horizontal = 18.dp),
+                    .padding(horizontal = 20.dp),
                 contentAlignment = Alignment.Center,
-            ) { Text(if (busy) "…" else "抓取", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold) }
+            ) { Text(if (busy) "…" else "抓取", color = BtnPrimaryText, fontSize = 14.sp, fontWeight = FontWeight.Medium) }
         }
         message?.let {
             Text(
@@ -474,7 +503,7 @@ private fun CapturePage(
         Spacer(Modifier.height(24.dp))
         Text(
             "提示：在任意内容 App 点「分享 → 更多 → Memmos」即可收进剪藏库（当前支持小红书）。",
-            fontSize = 11.sp, color = TextFaint, textAlign = TextAlign.Center,
+            fontSize = 11.sp, color = TextGhost, textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp),
         )
     }
@@ -526,11 +555,11 @@ private fun LibraryPage(
                 PageTitle("剪藏库")
                 Spacer(Modifier.weight(1f))
                 if (clips.isNotEmpty()) {
-                    Text(
-                        "编辑",
-                        fontSize = 13.sp, color = Color(0xFF6EE7B7), fontWeight = FontWeight.Bold,
-                        modifier = Modifier.clickable { selecting = true },
-                    )
+                Text(
+                    "编辑",
+                    fontSize = 13.sp, color = TextSoft, fontWeight = FontWeight.Medium,
+                    modifier = Modifier.clickable { selecting = true },
+                )
                 }
             } else {
                 Text("已选 ${selected.size} 篇", color = TextHi, fontSize = 18.sp, fontWeight = FontWeight.Bold)
@@ -564,7 +593,7 @@ private fun LibraryPage(
                 focusedTextColor = TextHi,
                 unfocusedTextColor = TextHi,
             ),
-            shape = RoundedCornerShape(12.dp),
+            shape = RoundedCornerShape(16.dp),
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 20.dp),
@@ -572,7 +601,7 @@ private fun LibraryPage(
         Text(
             if (selecting) "已选 ${selected.size} / 共 ${filtered.size} 篇"
             else "共 ${filtered.size} 篇 · 长按或点「编辑」进入多选",
-            fontSize = 11.sp, color = TextFaint,
+            fontSize = 11.sp, color = TextSoft,
             modifier = Modifier.padding(horizontal = 22.dp, vertical = 8.dp),
         )
         CaptureProgressCard()
@@ -684,9 +713,9 @@ private fun LibraryPage(
                 .align(Alignment.BottomCenter)
                 .padding(horizontal = 16.dp, vertical = 10.dp)
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(18.dp))
-                .background(Color(0xFF1A1D26))
-                .border(1.dp, GlassStroke)
+                .clip(RoundedCornerShape(999.dp))
+                .background(IslandFill)
+                .border(1.dp, Color(0x29FFFFFF))
                 .clickable(enabled = selected.isNotEmpty()) { showActionMenu = true }
                 .padding(horizontal = 14.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -847,8 +876,8 @@ private fun SettingsPage(message: String?, onMessage: (String?) -> Unit, onSync:
         Row(
             Modifier
                 .fillMaxWidth()
-                .background(GlassFill, RoundedCornerShape(12.dp))
-                .border(1.dp, GlassStrokeSoft, RoundedCornerShape(12.dp))
+                .background(Color(0x0DFFFFFF), RoundedCornerShape(16.dp))
+                .border(1.dp, Color(0x26FFFFFF), RoundedCornerShape(16.dp))
                 .padding(horizontal = 14.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -912,8 +941,8 @@ private fun SettingsPage(message: String?, onMessage: (String?) -> Unit, onSync:
         Row(
             Modifier
                 .fillMaxWidth()
-                .background(GlassFill, RoundedCornerShape(12.dp))
-                .border(1.dp, GlassStrokeSoft, RoundedCornerShape(12.dp))
+                .background(Color(0x0DFFFFFF), RoundedCornerShape(16.dp))
+                .border(1.dp, Color(0x26FFFFFF), RoundedCornerShape(16.dp))
                 .padding(horizontal = 14.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -946,8 +975,8 @@ private fun SettingsPage(message: String?, onMessage: (String?) -> Unit, onSync:
         Column(
             Modifier
                 .fillMaxWidth()
-                .background(GlassFill, RoundedCornerShape(12.dp))
-                .border(1.dp, GlassStrokeSoft, RoundedCornerShape(12.dp))
+                .background(Color(0x0DFFFFFF), RoundedCornerShape(16.dp))
+                .border(1.dp, Color(0x26FFFFFF), RoundedCornerShape(16.dp))
                 .padding(horizontal = 14.dp, vertical = 12.dp),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1013,13 +1042,13 @@ private fun SettingsPage(message: String?, onMessage: (String?) -> Unit, onSync:
             Modifier
                 .fillMaxWidth()
                 .background(
-                    if (canDraw && running) Color(0x0D46C882) else GlassFill,
-                    RoundedCornerShape(12.dp),
+                    if (canDraw && running) Color(0x0D46C882) else Color(0x0DFFFFFF),
+                    RoundedCornerShape(16.dp),
                 )
                 .border(
                     1.dp,
-                    if (canDraw && running) Color(0x3346C882) else GlassStrokeSoft,
-                    RoundedCornerShape(12.dp),
+                    if (canDraw && running) Color(0x3346C882) else Color(0x26FFFFFF),
+                    RoundedCornerShape(16.dp),
                 )
                 .clickable {
                     when {
@@ -1077,8 +1106,8 @@ private fun SettingsPage(message: String?, onMessage: (String?) -> Unit, onSync:
         Row(
             Modifier
                 .fillMaxWidth()
-                .background(GlassFill, RoundedCornerShape(12.dp))
-                .border(1.dp, GlassStrokeSoft, RoundedCornerShape(12.dp))
+                .background(Color(0x0DFFFFFF), RoundedCornerShape(16.dp))
+                .border(1.dp, Color(0x26FFFFFF), RoundedCornerShape(16.dp))
                 .padding(horizontal = 14.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -1369,14 +1398,14 @@ private fun CaptureProgressCard() {
     val cap by XhsCaptureService.state.collectAsState()
     if (!cap.running && cap.done != false) return
     val accent = if (cap.done == false) Color(0xFFFF5B6E) else AccentGreen
-    Column(
-        Modifier
-            .fillMaxWidth()
-            .padding(start = 20.dp, end = 20.dp, bottom = 8.dp)
-            .background(Color(0x141018), RoundedCornerShape(12.dp)) // 深底遮挡层，卡片呼应玻璃
-            .padding(12.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
+    VisionRowCard(
+        modifier = Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, bottom = 8.dp),
+        radius = 16.dp,
     ) {
+        Column(
+            Modifier.fillMaxWidth().padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
         Row(
             Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
@@ -1403,14 +1432,19 @@ private fun CaptureProgressCard() {
             cap.status,
             fontSize = 10.5.sp, color = if (cap.done == false) Color(0xFFFF5B6E) else TextFaint,
         )
+        }
     }
 }
 
-/** 页面大标题（mckp.live 节奏）：22sp 显示级 + 品牌紫短下划线（如 "A Real Experience." 强调） */
+/** 页面大标题（官方源 headline-lg）：Light 300 显示级 + 紧字距 + 品牌绿短下划线 */
 @Composable
 private fun PageTitle(text: String) {
     Column {
-        Text(text, color = TextHi, fontSize = 22.sp, fontWeight = FontWeight.Light, letterSpacing = (-0.55).sp)
+        Text(
+            text,
+            color = Color(0xFFF5F7FA), fontSize = 24.sp, fontWeight = FontWeight.Light,
+            letterSpacing = (-0.6).sp,
+        )
         Spacer(Modifier.height(5.dp))
         Box(
             Modifier
@@ -1424,10 +1458,10 @@ private fun PageTitle(text: String) {
 
 @Composable
 private fun SectionLabel(text: String) {
-    Text(text, fontSize = 11.sp, letterSpacing = 2.sp, color = TextFaint, modifier = Modifier.fillMaxWidth())
+    Text(text, fontSize = 11.sp, letterSpacing = 2.4.sp, color = TextSoft, modifier = Modifier.fillMaxWidth())
 }
 
-/** 剪藏行：多选模式下显示勾选圈（点按切换、长按进入多选由外层处理） */
+/** 剪藏行（模板 Recent sessions 行）：渐变发丝壳玻璃卡 + 缩略图描边环 + 类型角标 */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun ClipRow(
@@ -1439,89 +1473,104 @@ private fun ClipRow(
     onClick: () -> Unit,
 ) {
     val ctx = LocalContext.current
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .padding(bottom = 10.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .background(GlassFill)
-            .border(
-                1.dp,
-                if (selected) Color(0xFFFF5B6E) else GlassStrokeSoft,
-                RoundedCornerShape(12.dp),
-            )
+    VisionRowCard(
+        modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp),
+        radius = 16.dp,
+        contentModifier = Modifier
             .combinedClickable(
                 onClick = onClick,
                 onLongClick = onToggleSelect,
             )
-            .padding(10.dp),
-        verticalAlignment = Alignment.CenterVertically,
+            .then(
+                if (selected) Modifier.border(1.5.dp, Color(0x66FFFFFF), RoundedCornerShape(16.dp))
+                else Modifier,
+            ),
     ) {
-        if (selectionMode) {
+        Row(
+            Modifier.fillMaxWidth().padding(10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (selectionMode) {
+                Box(
+                    Modifier
+                        .size(22.dp)
+                        .clip(CircleShape)
+                        .background(if (selected) AccentBrush else SolidColor(Color.Transparent))
+                        .border(1.5.dp, if (selected) Color.Transparent else Color(0x66FFFFFF), CircleShape),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    if (selected) Text("✓", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                }
+                Spacer(Modifier.width(10.dp))
+            }
+            val cover = note.imageUrls.firstOrNull()
             Box(
                 Modifier
-                    .size(22.dp)
-                    .clip(CircleShape)
-                    .background(if (selected) AccentBrush else SolidColor(Color.Transparent))
-                    .border(1.5.dp, if (selected) Color.Transparent else Color(0x66FFFFFF), CircleShape),
-                contentAlignment = Alignment.Center,
+                    .size(56.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .border(1.dp, RingWhite, RoundedCornerShape(12.dp)),
             ) {
-                if (selected) Text("✓", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-            }
-            Spacer(Modifier.width(10.dp))
-        }
-        val cover = note.imageUrls.firstOrNull()
-        if (cover != null) {
-            AsyncImage(
-                model = cover,
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.size(64.dp).clip(RoundedCornerShape(10.dp)),
-            )
-        } else {
-            Box(
-                Modifier.size(64.dp).background(
-                    Brush.linearGradient(listOf(Color(0x2E10B981), Color(0x2E9E8FFF))),
-                    RoundedCornerShape(10.dp),
-                ),
-                contentAlignment = Alignment.Center,
-            ) { Text(if (note.type == "video") "▶" else if (note.origin == "vault") "M" else "文", color = Color(0xFF6EE7B7), fontSize = 18.sp) }
-        }
-        Spacer(Modifier.width(12.dp))
-        Column(Modifier.weight(1f)) {
-            Text(
-                note.title,
-                fontSize = 13.sp, color = TextHi, fontWeight = FontWeight.SemiBold,
-                lineHeight = 19.sp, maxLines = 2, overflow = TextOverflow.Ellipsis,
-            )
-            Spacer(Modifier.height(5.dp))
-            Text(
-                buildString {
-                    // 个人资料兜底：Obsidian 同步笔记显示设置里的名字（用户要求）
-                    append(
-                        note.author.ifBlank {
-                            if (note.origin == "vault") AppPrefs.profileName(ctx).ifBlank { "未知作者" }
-                            else "未知作者"
-                        },
+                if (cover != null) {
+                    AsyncImage(
+                        model = cover,
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize(),
                     )
-                    append(" · ")
-                    append(ClipStore.fmtTime(note.clippedAt))
-                    if (note.type == "video") append(" · 视频")
-                    else if (note.imageUrls.isNotEmpty()) append(" · ${note.imageUrls.size}图")
-                    if (note.origin == "vault") append(" · 库")
-                },
-                fontSize = 11.sp, color = TextFaint,
-            )
-        }
-        if (onRemove != null) {
-            Text(
-                "删除",
-                fontSize = 11.sp, color = Color(0xFFFF5B6E),
-                modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .clickable(onClick = onRemove)
-                    .padding(6.dp),
-            )
+                } else {
+                    Box(
+                        Modifier.fillMaxSize().background(
+                            Brush.linearGradient(listOf(Color(0x1F10B981), Color(0x1F34D399))),
+                        ),
+                        contentAlignment = Alignment.Center,
+                    ) { Text(if (note.origin == "vault") "M" else "文", color = ChipText, fontSize = 15.sp) }
+                }
+                if (note.type == "video") {
+                    Box(
+                        Modifier.align(Alignment.BottomEnd).padding(4.dp).size(18.dp)
+                            .background(Color(0xB3000000), CircleShape),
+                        contentAlignment = Alignment.Center,
+                    ) { IconPlayFilled(9.dp, Color.White) }
+                }
+            }
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    note.title,
+                    fontSize = 13.5.sp, color = TextHi, fontWeight = FontWeight.Medium,
+                    lineHeight = 19.sp, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    buildString {
+                        // 个人资料兜底：Obsidian 同步笔记显示设置里的名字（用户要求）
+                        append(
+                            note.author.ifBlank {
+                                if (note.origin == "vault") AppPrefs.profileName(ctx).ifBlank { "未知作者" }
+                                else "未知作者"
+                            },
+                        )
+                        append(" · ")
+                        append(ClipStore.fmtTime(note.clippedAt))
+                        if (note.type == "video") append(" · 视频")
+                        else if (note.imageUrls.isNotEmpty()) append(" · ${note.imageUrls.size}图")
+                        if (note.origin == "vault") append(" · 库")
+                    },
+                    fontSize = 11.sp, color = TextSoft,
+                )
+            }
+            if (onRemove != null) {
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    "删除",
+                    fontSize = 11.sp, color = Color(0xFFF87171),
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(999.dp))
+                        .background(Color(0x14F87171))
+                        .clickable(onClick = onRemove)
+                        .padding(horizontal = 10.dp, vertical = 5.dp),
+                )
+            }
         }
     }
 }
@@ -1540,58 +1589,59 @@ private fun SyncFileRow(f: java.io.File, onClick: () -> Unit) {
         "mp4", "mov" -> "▶"
         else -> "F"
     }
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .padding(bottom = 8.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .background(GlassFill)
-            .border(1.dp, GlassStrokeSoft, RoundedCornerShape(12.dp))
-            .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
+    VisionRowCard(
+        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+        radius = 16.dp,
+        contentModifier = Modifier.clickable(onClick = onClick),
     ) {
-        Box(
-            Modifier.size(38.dp).background(
-                Brush.linearGradient(listOf(Color(0x33FF2E4D), Color(0x33FF7A45))),
-                RoundedCornerShape(9.dp),
-            ),
-            contentAlignment = Alignment.Center,
-        ) { Text(badge, color = Color(0xFF6EE7B7), fontSize = 12.sp, fontWeight = FontWeight.Bold) }
-        Spacer(Modifier.width(11.dp))
-        Column(Modifier.weight(1f)) {
-            Text(f.name, fontSize = 13.sp, color = TextHi, maxLines = 1)
-            Text("${ext.uppercase()} · ${com.tylor.memmos.data.ClipStore.fmtSize(f.length())}", fontSize = 10.sp, color = TextFaint)
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                Modifier.size(38.dp).background(
+                    Brush.linearGradient(listOf(Color(0x1F10B981), Color(0x1F34D399))),
+                    RoundedCornerShape(10.dp),
+                ),
+                contentAlignment = Alignment.Center,
+            ) { Text(badge, color = ChipText, fontSize = 12.sp, fontWeight = FontWeight.Bold) }
+            Spacer(Modifier.width(11.dp))
+            Column(Modifier.weight(1f)) {
+                Text(f.name, fontSize = 13.sp, color = TextHi, maxLines = 1)
+                Text("${ext.uppercase()} · ${com.tylor.memmos.data.ClipStore.fmtSize(f.length())}", fontSize = 10.sp, color = TextSoft)
+            }
         }
     }
 }
 
+/** 主按钮（官方配方 button-primary：白底黑字；宽幅动作取 rounded-2xl，小动作取胶囊） */
 @Composable
 private fun CtaButton(text: String, onClick: () -> Unit) {
     Box(
         Modifier
             .fillMaxWidth()
-            .height(50.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .background(AccentBrush)
+            .height(52.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(BtnPrimaryBg)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Text(text, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+        Text(text, color = BtnPrimaryText, fontSize = 14.sp, fontWeight = FontWeight.Medium, letterSpacing = 0.3.sp)
     }
 }
 
+/** 次级按钮（模板 button-link）：白描边玻璃胶囊 */
 @Composable
 private fun GhostButton(text: String, onClick: () -> Unit) {
     Box(
         Modifier
             .fillMaxWidth()
             .height(50.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .border(1.dp, Color(0x6610B981), RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(999.dp))
+            .border(1.dp, Color(0x33FFFFFF), RoundedCornerShape(999.dp))
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Text(text, color = Color(0xFF6EE7B7), fontSize = 15.sp, fontWeight = FontWeight.Bold)
+        Text(text, color = Color(0xD9FFFFFF), fontSize = 14.sp, fontWeight = FontWeight.Medium)
     }
 }

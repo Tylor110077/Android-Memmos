@@ -198,3 +198,24 @@ fun IconCircleCheck(size: Dp, tint: Color, modifier: Modifier = Modifier) = Glyp
     }
     drawPath(p, tint, style = st)
 }
+
+/** 捕捉/扫描：四角括号 + 中心环（岛屿底栏「捕捉」项） */
+@Composable
+fun IconScan(size: Dp, tint: Color, modifier: Modifier = Modifier) = GlyphIcon(size, tint, modifier) { st ->
+    line(4f, 9f, 4f, 4f, st, tint); line(4f, 4f, 9f, 4f, st, tint)
+    line(15f, 4f, 20f, 4f, st, tint); line(20f, 4f, 20f, 9f, st, tint)
+    line(20f, 15f, 20f, 20f, st, tint); line(20f, 20f, 15f, 20f, st, tint)
+    line(9f, 20f, 4f, 20f, st, tint); line(4f, 20f, 4f, 15f, st, tint)
+    drawCircle(tint, radius = 3f, center = Offset(12f, 12f), style = st)
+}
+
+/** 剪藏库：四宫格圆角方块（岛屿底栏「剪藏库」项） */
+@Composable
+fun IconGrid(size: Dp, tint: Color, modifier: Modifier = Modifier) = GlyphIcon(size, tint, modifier) { st ->
+    val cr = CornerRadius(1.8f, 1.8f)
+    val s1 = Size(7.2f, 7.2f)
+    drawRoundRect(tint, topLeft = Offset(3.2f, 3.2f), size = s1, cornerRadius = cr, style = st)
+    drawRoundRect(tint, topLeft = Offset(13.6f, 3.2f), size = s1, cornerRadius = cr, style = st)
+    drawRoundRect(tint, topLeft = Offset(3.2f, 13.6f), size = s1, cornerRadius = cr, style = st)
+    drawRoundRect(tint, topLeft = Offset(13.6f, 13.6f), size = s1, cornerRadius = cr, style = st)
+}
