@@ -1,13 +1,12 @@
 package com.tylor.memmos.overlay
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.Orientation
@@ -24,17 +23,20 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.tylor.memmos.ui.CapturePanel
-import kotlin.math.roundToInt
 import com.tylor.memmos.ui.SettingsSheet
+import kotlin.math.roundToInt
+import kotlinx.coroutines.launch
 
 /**
  * 面板悬浮窗内容：变暗层（点按收回）+ 功能面板（从滑块侧滑入）+ 设置抽屉。
@@ -110,27 +112,43 @@ fun PanelHost(
                 .swipeDrag(onDragStart, onDrag, onRelease),
         )
 
-        // 设置抽屉（用户要求：与面板同宽不超浮窗、下滑关闭）；面板保持打开时可见
-        AnimatedVisibility(
-            visible = model.sheetOpen.value,
-            enter = slideInVertically(tween(300, easing = FastOutSlowInEasing)) { it },
-            exit = slideOutVertically(tween(240)) { it },
-            modifier = Modifier.align(if (panelOnLeft) Alignment.CenterStart else Alignment.CenterEnd),
-        ) {
-            var sheetDrag by remember { mutableStateOf(0f) }
-            val density = LocalDensity.current
+        // 设置抽屉（用户要求：与面板同宽不超浮窗、下滑关闭）；面板保持打开时可见。
+        // 单一 Animatable 自管理滑入/跟手/回弹/滑出——原来「AnimatedVisibility 动画 +
+        // 手拖 offset 双动画叠加」，松手未过阈值时 sheetDrag 瞬间归零（硬跳回）、关闭时与
+        // exit 动画叠加，表现为「抽动」。
+        val sheetAnim = remember { Animatable(0f) }
+        val density = LocalDensity.current
+        val sheetHpx = with(density) { LocalConfiguration.current.screenHeightDp.dp.toPx() }
+        val scope = rememberCoroutineScope()
+        LaunchedEffect(model.sheetOpen.value) {
+            if (model.sheetOpen.value) {
+                if (sheetAnim.value <= 0f) sheetAnim.snapTo(sheetHpx) // 从屏下进入
+                sheetAnim.animateTo(0f, tween(300, easing = FastOutSlowInEasing))
+            } else {
+                sheetAnim.animateTo(sheetHpx, tween(240)) // 整段滑出（同一值，与 offset 无冲突）
+            }
+        }
+        if (model.sheetOpen.value || sheetAnim.value < sheetHpx) {
+            val closePx = with(density) { 56.dp.toPx() }
             Box(
                 Modifier
                     .fillMaxWidth(0.86f)
-                    .offset { IntOffset(0, sheetDrag.roundToInt()) }
+                    .offset { IntOffset(0, sheetAnim.value.roundToInt()) }
                     .draggable(
-                        state = rememberDraggableState { d -> sheetDrag = (sheetDrag + d).coerceAtLeast(0f) },
+                        state = rememberDraggableState { d ->
+                            scope.launch {
+                                sheetAnim.stop()
+                                sheetAnim.snapTo((sheetAnim.value + d).coerceAtLeast(0f))
+                            }
+                        },
                         orientation = Orientation.Vertical,
+                        onDragStarted = { scope.launch { sheetAnim.stop() } },
                         onDragStopped = { v ->
-                            // 短滑即收（用户要求滑动距离短）：56dp 位移或 900px/s 甩动
-                            val threshold = with(density) { 56.dp.toPx() }
-                            if (sheetDrag > threshold || v > 900f) model.sheetOpen.value = false
-                            sheetDrag = 0f
+                            // 短滑即收：56dp 位移或 900px/s 甩动；回弹走同一 Animatable，平滑无抽动
+                            if (sheetAnim.value > closePx || v > 900f) model.sheetOpen.value = false
+                            else scope.launch {
+                                sheetAnim.animateTo(0f, tween(220, easing = FastOutSlowInEasing))
+                            }
                         },
                     ),
             ) {
