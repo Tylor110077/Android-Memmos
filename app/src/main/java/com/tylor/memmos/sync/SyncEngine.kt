@@ -253,51 +253,32 @@ object SyncEngine {
         var down = 0
         val vaultDir = java.io.File(ctx.filesDir, "vault").apply { mkdirs() }
         // 进度同样只统计需要下载的项（非帖子 md + 缺失附件；已最新不计入）
-        fun isBinaryHead(f: java.io.File): Boolean {
-            val head = runCatching {
-                f.inputStream().use { it.readNBytes(16) }
-            }.getOrNull() ?: return false
-            val b = head
-            return (b.size > 2 && b[0] == 0xFF.toByte() && b[1] == 0xD8.toByte()) || // jpg
-                (b.size > 4 && b[0] == 0x89.toByte() && b[1] == 0x50.toByte()) || // png
-                (b.size > 4 && b[0] == 0x25.toByte() && b[1] == 0x50.toByte()) || // %PDF
-                (b.size > 4 && b[0] == 0x50.toByte() && b[1] == 0x4B.toByte()) || // PK(zip/docx)
-                (b.size > 12 && String(b, 4, 4) == "ftyp") || // mp4/mov
-                (b.size > 3 && b[0] == 0x49.toByte() && b[1] == 0x44.toByte() && b[2] == 0x33.toByte()) // id3
-        }
 
-        fun needFile(path: String, item: SyncClient.InvItem): Boolean {
-            if (isPostMd(path)) return false
-            if (path.endsWith(".md", true)) {
-                val ex = local.firstOrNull { it.originPath == path }
-                return ex == null || sha16(ex.rawMd.orEmpty()) != item.sha256
-            }
-            // 附件（媒体/文档）：原样保存到 vault，Library「同步文件」区展示；
-            // 已存在且为合法二进制内容才跳过（旧版把媒体当 md 下载过，留下的是乱码文本）
-            val f = java.io.File(vaultDir, path)
-            return !(f.exists() && f.length() > 0 && isBinaryHead(f))
+        /**
+         * 下载判定（用户同步模型：手机=帖子、Obsidian=文件，附件只是 md 的附属物）：
+         * - 帖子 md（memmos-id）→ 跳过（手机端已有该帖子，防重复传递）
+         * - 其他 .md → 需要时下载并**重组为帖子**进剪藏库（附件随 md 引用拉取）
+         * - 非 md（媒体/附件）→ **不单独下载**（避免与帖子重复；它们由所在 md 引用拉取）
+         */
+        var doneD = 0
+        val needDown = remote.count { (path, item) ->
+            if (isPostMd(path) || !path.endsWith(".md", true)) return@count false
+            val ex = local.firstOrNull { it.originPath == path }
+            ex == null || sha16(ex.rawMd.orEmpty()) != item.sha256
         }
-        val needDown = remote.count { (path, item) -> needFile(path, item) }
         android.util.Log.d(
             "MemmosDbg",
             "sync: inventory=${remote.size} (posts=${remote.count { isPostMd(it.key) }}) needUp=$needUp needDown=$needDown",
         )
+        // 一次性清理旧版「附件独立下载」落地的重复文件（帖子拆分目录下的媒体副本）
+        runCatching { java.io.File(vaultDir, "Memmos graph/media").deleteRecursively() }
         if (needDown > 0) progress.value = SyncProgress("下载到手机", 0, needDown)
-        var doneD = 0
         for ((path, item) in remote) {
-            if (!needFile(path, item)) continue // 帖子/已最新一致 → 跳过；Obsidian 侧改过（指纹不同）→ 更新手机
+            if (isPostMd(path) || !path.endsWith(".md", true)) continue
+            val ex = local.firstOrNull { it.originPath == path }
+            if (ex != null && sha16(ex.rawMd.orEmpty()) == item.sha256) continue // 一致跳过
             doneD++
             progress.value = SyncProgress("下载到手机", doneD.coerceAtMost(needDown), needDown)
-            if (!path.endsWith(".md", true)) {
-                // 附件下载：原样写 vault（不做 md 解析——旧版把媒体当笔记下载污染剪藏库）
-                val f = java.io.File(vaultDir, path)
-                val b64 = runCatching { client.getBinary(path) }.getOrDefault("")
-                if (b64.isNotBlank()) {
-                    f.parentFile?.mkdirs()
-                    f.writeBytes(Base64.decode(b64, Base64.NO_WRAP))
-                }
-                continue
-            }
             android.util.Log.d("MemmosDbg", "down md: $path sha=${item.sha256.take(8)}")
             runCatching {
                 val md = client.getFile(path)
@@ -319,7 +300,8 @@ object SyncEngine {
                 Regex("""!\[\[((?:\.\./)*)media/[^\]]+)\]\]""").findAll(md).forEach { mediaRefs += it.groupValues[1] }
                 Regex("""src="((?:\.\./)*)media/[^"]+)"""").findAll(md).forEach { mediaRefs += it.groupValues[1] }
                 mediaRefs.forEach { rel ->
-                    val target = java.io.File(vaultDir, "$mdDir/$rel")
+                    // canonicalFile：解析 ../media/ 相对引用到真实路径（旧版含 ".." 的路径 mkdirs 会失败）
+                    val target = java.io.File(vaultDir, "$mdDir/$rel").canonicalFile
                     if (target.exists()) return@forEach
                     val b64 = runCatching { client.getBinary("$mdDir/$rel") }.getOrDefault("")
                     if (b64.isNotBlank()) {
