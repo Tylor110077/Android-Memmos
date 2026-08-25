@@ -211,6 +211,21 @@ class FloatingService : Service() {
     }
 
     /** 滑块停靠坐标：由 edge+frac 推出窗口 x/y（全为屏幕像素） */
+    /** 浮条拖拽换边跟手更新节流（同面板策略：坐标即时写、窗口更新 32ms 合并） */
+    private var tabXPending = false
+    private val tabXApply = Runnable {
+        tabXPending = false
+        val v = tabView ?: return@Runnable
+        runCatching { wm.updateViewLayout(v, tabLp) }
+    }
+
+    private fun throttledTabApply() {
+        if (!tabXPending) {
+            tabXPending = true
+            main.postDelayed(tabXApply, 32L)
+        }
+    }
+
     private fun restingCoords(): Pair<Int, Int> {
         val (w, h) = screen()
         val tw = tabLp.width; val th = tabLp.height
@@ -292,6 +307,7 @@ class FloatingService : Service() {
                     moved = false; longPressFired = false; panelDrag = false
                     model.dragging.value = false
                     lastX = ev.rawX; lastT = System.currentTimeMillis()
+                    tabXPending = false; main.removeCallbacks(tabXApply) // 新手势：清旧合并任务
                     v.handler.postDelayed(longPressRunnable, longPressTimeout)
                 }
                 MotionEvent.ACTION_MOVE -> {
@@ -319,7 +335,7 @@ class FloatingService : Service() {
                             val (w, h) = screen()
                             tabLp.x = (baseX + dx).roundToInt().coerceIn(0, w - tabLp.width)
                             tabLp.y = (baseY + dy).roundToInt().coerceIn(0, h - tabLp.height)
-                            wm.updateViewLayout(tabView, tabLp)
+                            throttledTabApply() // 同面板：32ms 合并窗口更新
                         }
                         panelDrag -> {
                             updatePanelX(ev.rawX - lastX)
@@ -488,13 +504,29 @@ class FloatingService : Service() {
     }
 
     /** 拖动跟手：增量移动面板窗口 x */
+    /** 跟手移动节流：坐标即时写入 lp（松手判定读最新值不受影响），
+     *  窗口 updateViewLayout 合并到 32ms 一次——ColorOS 上每帧移动 overlay 窗口=屏闪（用户反馈） */
+    private var panelXPending = false
+    private val panelXApply = Runnable {
+        panelXPending = false
+        val v = panelView ?: return@Runnable
+        runCatching { wm.updateViewLayout(v, panelLp) }
+    }
+
+    private fun throttledPanelApply() {
+        if (!panelXPending) {
+            panelXPending = true
+            main.postDelayed(panelXApply, 32L)
+        }
+    }
+
     private fun updatePanelX(delta: Float) {
         val v = panelView ?: return
         val (w, _) = screen()
         anim?.cancel()
         // 两侧对称的弹性余量：旧钳制 [-w-60, +60] 让右缘面板物理上拖不回（只能回弹 60dp）
         panelLp.x = (panelLp.x + delta).roundToInt().coerceIn(-w - dp(60f).toInt(), w + dp(60f).toInt())
-        runCatching { wm.updateViewLayout(v, panelLp) }
+        throttledPanelApply()
     }
 
     /**
