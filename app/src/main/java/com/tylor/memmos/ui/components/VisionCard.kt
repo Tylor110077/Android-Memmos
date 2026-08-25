@@ -69,20 +69,26 @@ fun VisionRowCard(
     content: @Composable BoxScope.() -> Unit,
 ) = VisionCard(modifier, radius, ShellGradientDim, VisionSurface, contentModifier, content)
 
-/** 玻璃圆形小按钮（模板 header 的 w-9 h-9：bg-white/10 + border-white/20 + blur） */
+/**
+ * 玻璃圆形小按钮（模板 header 的 w-9 h-9：bg-white/10 + border-white/20 + blur）。
+ * 面板顶部可能叠在环境光斑上，白色 10% 底会看不清——默认改深色玻璃底
+ * （黑 40% + 白描边），保证在亮/暗背景上都可读。
+ */
 @Composable
 fun GlassCircleButton(
-    size: Dp = 36.dp,
+    size: Dp = 40.dp,
     content: @Composable BoxScope.() -> Unit,
     modifier: Modifier = Modifier,
+    fill: Color = Color(0x66000000),
+    stroke: Color = Color(0x33FFFFFF),
     onClick: () -> Unit,
 ) {
     Box(
         modifier
             .size(size)
             .clip(CircleShape)
-            .background(Color(0x1AFFFFFF))
-            .border(1.dp, Color(0x33FFFFFF), CircleShape)
+            .background(fill)
+            .border(1.dp, stroke, CircleShape)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
         content = content,

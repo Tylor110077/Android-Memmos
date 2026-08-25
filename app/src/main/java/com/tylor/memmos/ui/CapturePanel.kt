@@ -73,6 +73,8 @@ fun CapturePanel(
     val recent = remember(cap.done) { ClipStore(ctx).load().take(3) }
 
     Box(modifier.fillMaxWidth()) {
+        // 先垫 95% 深底：面板是悬浮层、底下是宿主 App，全透明会让宿主文字叠进来
+        Box(Modifier.fillMaxSize().background(Color(0xF20B0D12)))
         // 与主界面同一片环境光（模板 Ambient Background）
         AmbientBackdrop(Modifier.fillMaxSize(), alpha = 0.45f)
         Column(
@@ -92,14 +94,14 @@ fun CapturePanel(
                 PairedChip(paired)
                 Spacer(Modifier.width(10.dp))
                 GlassCircleButton(
-                    size = 36.dp,
-                    content = { IconGear(18.dp, Color(0xD9FFFFFF)) },
+                    size = 40.dp,
+                    content = { IconGear(20.dp, Color.White) },
                     onClick = { onOpenSettings() },
                 )
-                Spacer(Modifier.width(8.dp))
+                Spacer(Modifier.width(10.dp))
                 GlassCircleButton(
-                    size = 36.dp,
-                    content = { IconClose(18.dp, Color(0xD9FFFFFF)) },
+                    size = 42.dp,
+                    content = { IconClose(22.dp, Color.White) },
                     onClick = { onClose() },
                 )
             }

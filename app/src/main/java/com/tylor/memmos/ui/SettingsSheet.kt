@@ -71,6 +71,8 @@ fun SettingsSheet(
             .fillMaxWidth()
             .fillMaxHeight(0.84f),
     ) {
+        // 先垫 95% 深底：抽屉叠在面板/宿主之上，全透明会让底层文字叠进来
+        Box(Modifier.fillMaxSize().background(Color(0xF20B0D12)))
         // 环境背景：与主界面/面板同一片环境光（模板 Ambient Background）
         AmbientBackdrop(Modifier.fillMaxSize(), alpha = 0.42f)
         Column(
