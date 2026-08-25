@@ -68,6 +68,17 @@ class XhsCaptureService : Service() {
     private val handler = Handler(Looper.getMainLooper())
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val videoCandidates = java.util.concurrent.CopyOnWriteArrayList<String>()
+
+    /** 只认"标准正文图"形态：sns-webpic + 路径含 1040g/1040h/1060g…或 noteImage——
+     * 排除 glo/frame（小程序 frame）、oss-sg/notes（区域资源）、spectrum/notes_pre_post（预览卡）等
+     * 非正文封面资源（这些形态每次加载都可能不同，导致"图片样式和数量不一样"） */
+    private fun isNoteImage(u: String): Boolean {
+        if (!u.startsWith("http") || !u.contains("sns-webpic")) return false
+        val p = u.substringAfter(".com/")
+        return p.contains("/1040g") || p.contains("/1040h") || p.contains("/1060g") ||
+            p.contains("noteImage") || p.contains("/1040z") || p.contains("/1041g")
+    }
+
     private val coverCandidates = java.util.concurrent.CopyOnWriteArrayList<String>()
     private var webView: WebView? = null
     /** 短链展开后的最终页 URL：DOM 路线落库 pageUrl 用长链（短链有时效） */
@@ -132,9 +143,7 @@ class XhsCaptureService : Service() {
                 if (XhsDomCapture.VIDEO_URL.find(u) != null) videoCandidates.add(u)
                 // 封面候选同样过滤预览卡（notes_pre_post/spectrum 是分享/预览资源，不是正文封面——
                 // 视频帖 DOM 无图时用它兜底会把封面挂成预览卡 → 内容与封面错位）
-                if (XhsDomCapture.COVER_URL.find(u) != null &&
-                    !u.contains("notes_pre_post") && !u.contains("spectrum")
-                ) coverCandidates.add(u)
+                if (XhsDomCapture.COVER_URL.find(u) != null && isNoteImage(u)) coverCandidates.add(u)
                 return null
             }
 
@@ -284,14 +293,11 @@ class XhsCaptureService : Service() {
                 // 图片优先级：① __INITIAL_STATE__ 权威链 ② og:image（=本文封面，页面 meta）
                 //   ③ DOM 收集（桌面版有"相关推荐"图风险）④ 网络拦截（已滤预览卡）
                 imageUrls = (httpNote?.imageUrls?.takeIf { it.isNotEmpty() } ?: run {
-                    val og = ogImage
+                    val og = ogImage?.takeIf { isNoteImage(it) }
+                    val domImgs = domNote.imageUrls.filter { isNoteImage(it) }
                     when {
-                        og != null -> listOf(og) + domNote.imageUrls.filter { it != og }
-                        else -> domNote.imageUrls.ifEmpty {
-                            coverCandidates.filter {
-                                it.startsWith("http") && !it.contains("notes_pre_post") && !it.contains("spectrum")
-                            }
-                        }
+                        og != null -> listOf(og) + domImgs.filter { it != og }
+                        else -> domImgs.ifEmpty { coverCandidates.distinct() }
                     }
                 }),
                 videoUrl = httpNote?.videoUrl ?: domNote.videoUrl,
