@@ -15,6 +15,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -437,8 +438,6 @@ private fun VideoCoverBlock(cover: String?, progress: Float?, onDownload: () -> 
 
  * 手势提示内容类型（音量/亮度带矢量图标，进度只有文字） */
 private sealed class GestureTip(val text: String) {
-    class Brightness(pct: Int) : GestureTip("$pct%")
-    class Volume(pct: Int) : GestureTip("$pct%")
     class Seek(t: String) : GestureTip(t)
 }
 
@@ -453,7 +452,6 @@ private sealed class GestureTip(val text: String) {
 private fun InlineVideoPlayer(file: File, autoplay: Boolean, cover: String? = null) {
     val ctx = LocalContext.current
     val activity = ctx as? ComponentActivity
-    val audio = remember { ctx.getSystemService(Context.AUDIO_SERVICE) as AudioManager }
     var fullscreen by remember { mutableStateOf(false) }
     var playing by remember { mutableStateOf(false) }
     var controls by remember { mutableStateOf(true) }
@@ -463,20 +461,8 @@ private fun InlineVideoPlayer(file: File, autoplay: Boolean, cover: String? = nu
     var gestureTip by remember { mutableStateOf<GestureTip?>(null) }
     var dragActive by remember { mutableStateOf(false) }
     var resumeMs by remember { mutableStateOf<Long?>(null) } // 全屏退出后在指定位置续播
-    val originalBright = remember {
-        (activity?.window?.attributes?.screenBrightness ?: -1f).takeIf { it in 0f..1f } ?: -1f
-    }
     val vv = remember(file) { VideoView(ctx) }
 
-    // 亮度还原（离开页面时；只有改过才动）
-    DisposableEffect(Unit) {
-        onDispose {
-            if (originalBright >= 0f) {
-                val w = activity?.window ?: return@onDispose
-                val lp = w.attributes; lp.screenBrightness = originalBright; w.attributes = lp
-            }
-        }
-    }
     // 全屏时隐藏系统栏 + 横屏播放（用户要求），退出还原竖屏
     LaunchedEffect(fullscreen) {
         val w = activity?.window ?: return@LaunchedEffect
@@ -548,7 +534,7 @@ private fun InlineVideoPlayer(file: File, autoplay: Boolean, cover: String? = nu
             Box(
                 Modifier
                     .fillMaxSize()
-                    .videoGestures(vv, audio, activity, position, duration, { gestureTip = it }, { dragActive = it })
+                    .videoGestures(vv, position, duration, { gestureTip = it }, { dragActive = it })
                     .pointerInput(Unit) {
                         detectTapGestures { if (gestureTip == null && !dragActive) controls = !controls }
                     },
@@ -590,12 +576,6 @@ private fun InlineVideoPlayer(file: File, autoplay: Boolean, cover: String? = nu
                             .padding(horizontal = 12.dp, vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        when (tip) {
-                            is GestureTip.Brightness -> IconSun(14.dp, Color.White)
-                            is GestureTip.Volume -> IconVolumeSpeaker(14.dp, Color.White)
-                            is GestureTip.Seek -> {}
-                        }
-                        if (tip !is GestureTip.Seek) Spacer(Modifier.width(5.dp))
                         Text(tip.text, color = Color.White, fontSize = 13.sp)
                     }
                 }
@@ -651,7 +631,7 @@ private fun FullscreenPlayer(
         Box(
             Modifier
                 .fillMaxSize()
-                .videoGestures(vv, audio, activity, position, duration, { gestureTip = it }, { dragActive = it })
+                .videoGestures(vv, position, duration, { gestureTip = it }, { dragActive = it })
                 .pointerInput(Unit) {
                     detectTapGestures { if (gestureTip == null && !dragActive) controls = !controls }
                 },
@@ -681,12 +661,6 @@ private fun FullscreenPlayer(
                         .padding(horizontal = 12.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    when (tip) {
-                        is GestureTip.Brightness -> IconSun(14.dp, Color.White)
-                        is GestureTip.Volume -> IconVolumeSpeaker(14.dp, Color.White)
-                        is GestureTip.Seek -> {}
-                    }
-                    if (tip !is GestureTip.Seek) Spacer(Modifier.width(5.dp))
                     Text(tip.text, color = Color.White, fontSize = 13.sp)
                 }
             }
@@ -725,54 +699,33 @@ private fun VideoSurface(
 }
 
 /**
- * 手势 Modifier：左半区竖滑=亮度、右半区竖滑=音量、横滑=进度；
+ * 手势 Modifier（简化版）：仅横滑=进度；竖滑不拦截、交给页面滚动；
  * isDragActive 供单击层判断是否刚拖过（避免拖完误触发控制条切换）。
  */
 private fun Modifier.videoGestures(
     vv: VideoView,
-    audio: AudioManager,
-    activity: ComponentActivity?,
     position: Long,
     duration: Long,
     setTip: (GestureTip?) -> Unit,
     setDragging: (Boolean) -> Unit,
-): Modifier = pointerInput(vv) {
-    var totalX = 0f; var totalY = 0f; var startX = 0f
-    var mode = 0 // 0 未定 1 亮度 2 音量 3 进度
-    var startB = 0.5f; var startV = 0; var startPos = 0L
-    detectDragGestures(
-        onDragStart = { startX = it.x; totalX = 0f; totalY = 0f; mode = 0; setTip(null) },
-        onDrag = { change, amount ->
+): Modifier = pointerInput(vv, duration) {
+    // 只监听水平拖动（进度 seek）；竖滑不参与 slop 竞争 → 交给页面滚动，
+    // 用户下滑帖子不会被视频手势截走（旧的 左半区亮度/右半区音量 已按需求移除）
+    var totalX = 0f
+    var startPos = 0L
+    var active = false
+    detectHorizontalDragGestures(
+        onDragStart = { totalX = 0f; startPos = position; active = false; setTip(null) },
+        onHorizontalDrag = { change, amount ->
             change.consume()
-            totalX += amount.x; totalY += amount.y
-            val w = size.width.toFloat(); val h = size.height.toFloat()
-            if (mode == 0) {
-                mode = if (abs(totalX) > abs(totalY)) 3 else if (startX < w / 2f) 1 else 2
-                setDragging(true)
-                startB = (activity?.window?.attributes?.screenBrightness ?: 0.5f).takeIf { it >= 0f } ?: 0.5f
-                startV = audio.getStreamVolume(AudioManager.STREAM_MUSIC)
-                startPos = position
-            }
-            when (mode) {
-                1 -> { // 亮度：上滑增
-                    val v = (startB - totalY / h).coerceIn(0.02f, 1f)
-                    activity?.window?.attributes?.apply {
-                        screenBrightness = v
-                        activity.window.attributes = this
-                    }
-                    setTip(GestureTip.Brightness((v * 100).toInt()))
-                }
-                2 -> { // 音量：上滑增
-                    val max = audio.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
-                    val nv = (startV - totalY / h * max).roundToInt().coerceIn(0, max)
-                    audio.setStreamVolume(AudioManager.STREAM_MUSIC, nv, 0)
-                    setTip(GestureTip.Volume(nv * 100 / max))
-                }
-                3 -> { // 进度：右滑前进
-                    val ms = (startPos + (totalX / w * duration.toFloat()).toLong()).coerceIn(0L, duration)
-                    vv.seekTo(ms.toInt())
-                    setTip(GestureTip.Seek("${fmtMs(ms)} / ${fmtMs(duration)}"))
-                }
+            setDragging(true)
+            val w = size.width.toFloat()
+            if (!active && abs(totalX) > 14f) { active = true; startPos = position }
+            totalX += amount // detectHorizontalDragGestures 的增量是 Float
+            if (active && duration > 0) {
+                val ms = (startPos + (totalX / w * duration.toFloat()).toLong()).coerceIn(0L, duration)
+                vv.seekTo(ms.toInt())
+                setTip(GestureTip.Seek("${fmtMs(ms)} / ${fmtMs(duration)}"))
             }
         },
         onDragEnd = { setTip(null); setDragging(false) },
@@ -780,7 +733,6 @@ private fun Modifier.videoGestures(
     )
 }
 
-/** 底部控制条：进度点按跳转 + 播放/暂停 + 时间 + 全屏切换 */
 @Composable
 private fun PlayerControlBar(
     vv: VideoView, playing: Boolean, position: Long, duration: Long,
