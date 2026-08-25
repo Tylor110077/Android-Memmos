@@ -345,7 +345,7 @@ class XhsCaptureService : Service() {
         android.util.Log.d(
             "MemmosDbg",
             "save note: ${note.title.take(20)} imgs=${note.imageUrls.size} first3=" +
-                note.imageUrls.take(3).joinToString(",") { it.substringAfterLast("/").take(14) },
+                note.imageUrls.take(10).joinToString(",") { it.substringAfterLast("/").removePrefix("1040g0k0322n").take(10) },
         )
         val ok = runCatching {
             val store = ClipStore(this)

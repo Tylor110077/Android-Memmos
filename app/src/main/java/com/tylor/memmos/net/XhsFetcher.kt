@@ -207,7 +207,7 @@ object XhsFetcher {
             .also { if (it.isNotEmpty()) android.util.Log.d(
                 "MemmosDbg",
                 "imgList fallback: n=${it.size} seq=" +
-                    it.joinToString("|") { u -> u.substringAfterLast('/').take(12) },
+                    it.joinToString("|") { u -> u.substringAfterLast('/').removePrefix("1040g0k0322n").take(10) },
             ) }
         else emptyList()
 
