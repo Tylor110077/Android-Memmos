@@ -270,12 +270,18 @@ class XhsCaptureService : Service() {
                 avatarUrl = domNote.avatarUrl.ifBlank { httpNote?.avatarUrl.orEmpty() },
                 tags = domNote.tags.ifEmpty { httpNote?.tags.orEmpty() },
                 comments = domNote.comments.ifEmpty { httpNote?.comments.orEmpty() },
-                imageUrls = domNote.imageUrls.ifEmpty {
-                    val c = coverCandidates.firstOrNull { it.startsWith("http") }
-                    if (c != null) listOf(c) else httpNote?.imageUrls.orEmpty()
-                },
-                videoUrl = domNote.videoUrl ?: httpNote?.videoUrl,
-                type = if ((domNote.videoUrl ?: httpNote?.videoUrl) != null) "video" else domNote.type,
+                // 媒体必须与笔记 ID 严格对应：__INITIAL_STATE__（httpNote）是最权威的数据链
+                // （页面 DOM 的 .media-container 等选择器在桌面版会命中"相关推荐"卡片 → 封面/视频错位）；
+                // DOM/网络拦截只在权威链缺失（变体页）时兜底，且兜底前过滤预览卡（页面上已滤）。
+                imageUrls = (httpNote?.imageUrls?.takeIf { it.isNotEmpty() } ?: domNote.imageUrls)
+                    .ifEmpty {
+                        val c = coverCandidates.firstOrNull {
+                            it.startsWith("http") && !it.contains("notes_pre_post") && !it.contains("spectrum")
+                        }
+                        if (c != null) listOf(c) else emptyList()
+                    },
+                videoUrl = httpNote?.videoUrl ?: domNote.videoUrl,
+                type = if ((httpNote?.videoUrl ?: domNote.videoUrl) != null) "video" else domNote.type,
             )
             handler.post { finish(merged) }
         }
