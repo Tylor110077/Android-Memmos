@@ -24,6 +24,8 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -35,6 +37,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalContext
 import coil.compose.AsyncImage
@@ -47,6 +53,7 @@ import com.tylor.memmos.ui.theme.BtnPrimaryText
 import com.tylor.memmos.ui.theme.ChipBg
 import com.tylor.memmos.ui.theme.ChipText
 import com.tylor.memmos.ui.theme.RingWhite
+import com.tylor.memmos.ui.theme.TextGhost
 import com.tylor.memmos.ui.theme.Success
 import com.tylor.memmos.ui.theme.TextFaint
 import com.tylor.memmos.ui.theme.TextHi
@@ -80,7 +87,18 @@ fun CapturePanel(
         BoxWithConstraints(
             Modifier.fillMaxWidth()
                 // 上下 34dp：NO_LIMITS 后窗口延伸进状态栏/手势区，补偿避免内容被系统 UI 压住
-                .padding(start = 20.dp, end = 20.dp, top = 34.dp, bottom = 34.dp),
+                .padding(start = 20.dp, end = 20.dp, top = 34.dp, bottom = 34.dp)
+                // 面板任意非滚动处**向下轻微滑动**（≥36dp）即展开设置（用户手部活动空间有限；
+                // 最近剪藏列表区由下方 nestedScroll 在顶部下拉时触发）
+                .pointerInput(onOpenSettings) {
+                    val threshold = with(density) { 36.dp.toPx() }
+                    var total = 0f
+                    detectVerticalDragGestures(
+                        onDragStart = { total = 0f },
+                        onDragEnd = { if (total > threshold) onOpenSettings() },
+                        onVerticalDrag = { change, dy -> total += dy; change.consume() },
+                    )
+                },
         ) {
             // 黄金比例锚点：按钮顶落在面板可用高度 61.8% 处
             // content 高度构成：header 40 + spacer 14 + 分区标签 ~40（anchorOffset = 54 + 40）
@@ -97,41 +115,47 @@ fun CapturePanel(
                 Spacer(Modifier.width(10.dp)) // 配对 chip 与标题文本的最小间距（用户反馈太近）
                 PairedChip(paired)
             }
-            Spacer(Modifier.height(12.dp))
-            // 「浮条设置」把手（用户要求删齿轮按钮）：在最近剪藏上方一条，向下滑展开设置抽屉
-            Box(
+            Spacer(Modifier.height(10.dp))
+            // 「浮条设置」提示行（弱化：小字无底无边，不碍美观；点击或面板任意处下滑均可展开）
+            Row(
                 Modifier
                     .fillMaxWidth()
-                    .height(40.dp)
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(Color(0x12FFFFFF))
-                    .border(1.dp, Color(0x1FFFFFFF), RoundedCornerShape(14.dp))
-                    .clickable { onOpenSettings() }
-                    .pointerInput(Unit) {
-                        val threshold = with(density) { 36.dp.toPx() }
-                        var total = 0f
-                        detectVerticalDragGestures(
-                            onDragStart = { total = 0f },
-                            onDragEnd = { if (total > threshold) onOpenSettings() },
-                            onVerticalDrag = { change, dy -> total += dy; change.consume() },
-                        )
-                    },
-                contentAlignment = Alignment.Center,
+                    .height(28.dp)
+                    .clickable { onOpenSettings() },
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center,
             ) {
-                Text(
-                    "浮条设置",
-                    fontSize = 12.sp, color = TextSoft, fontWeight = FontWeight.Medium,
-                    letterSpacing = 0.5.sp,
-                )
+                Text("浮条设置", fontSize = 10.5.sp, color = TextGhost, letterSpacing = 1.2.sp)
+                Spacer(Modifier.width(4.dp))
+                Text("▾", fontSize = 10.sp, color = TextGhost)
             }
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(6.dp))
 
-                // 最近剪藏滚动区：止于黄金锚点
+                // 最近剪藏滚动区：止于黄金锚点；列表顶部向下拉（≥12dp）优先展开设置（nested
+                // scroll 在滚动消费前先触发，滚动开始后（非顶部）下拉仍正常滚动列表）
+                val listScroll = rememberScrollState()
+                var pullDown by remember { mutableStateOf(0f) }
+                val pullToSettings = remember(density) {
+                    object : NestedScrollConnection {
+                        override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                            if (available.y > 0f && listScroll.value == 0) {
+                                pullDown += available.y
+                                val t = with(density) { 12.dp.toPx() }
+                                if (pullDown > t) {
+                                    pullDown = 0f
+                                    onOpenSettings()
+                                }
+                            } else if (available.y < 0f) pullDown = 0f
+                            return Offset.Zero
+                        }
+                    }
+                }
                 Column(
                     Modifier
                         .fillMaxWidth()
                         .height((anchor - 94.dp).coerceAtLeast(0.dp))
-                        .verticalScroll(rememberScrollState()),
+                        .nestedScroll(pullToSettings)
+                        .verticalScroll(listScroll),
                 ) {
                     SectionLabel("最近剪藏")
                     if (recent.isEmpty()) {
