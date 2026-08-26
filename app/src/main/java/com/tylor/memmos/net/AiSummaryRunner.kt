@@ -9,6 +9,8 @@ import android.content.Intent
 import android.os.Build
 import com.tylor.memmos.R
 import com.tylor.memmos.data.ClipStore
+import com.tylor.memmos.sync.SyncEngine
+import com.tylor.memmos.sync.SyncPrefs
 import com.tylor.memmos.ui.clips.ClipDetailActivity
 import com.tylor.memmos.util.AppPrefs
 import kotlinx.coroutines.CoroutineScope
@@ -16,6 +18,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * AI 总结后台任务：详情页「生成」只负责触发——卡片协程跟着 Activity 走，退出页面即会被取消；
@@ -68,6 +71,32 @@ object AiSummaryRunner {
             running.value = null
             lastOutcome.value = Outcome(noteId, sum, System.currentTimeMillis())
             notifyDone(app, noteId, note.title, sum != null)
+            if (sum != null) syncAfterGenerated(app, noteId)
+        }
+    }
+
+    /** 正在自动推送的笔记（去重：避免手动+剪藏两个入口并发重复推同一篇） */
+    private val syncingIds = ConcurrentHashMap.newKeySet<String>()
+
+    /**
+     * 新总结生成后的自动同步（用户要求「生成了新的 AI 总结，该同步的也要同步过去」）：
+     * 已配对时把该篇剪藏推送到 Obsidian（md 引用 + AI summary 文件一并上传）；
+     * 未配对/失败均静默——下次手动「立即同步」会兜底，不打扰用户。
+     */
+    fun syncAfterGenerated(ctx: Context, noteId: String) {
+        if (!syncingIds.add(noteId)) return
+        scope.launch {
+            try {
+                val app = ctx.applicationContext
+                val client = SyncPrefs.load(app) ?: return@launch
+                val note = ClipStore(app).load().firstOrNull { it.id == noteId } ?: return@launch
+                SyncEngine.uploadNotes(app, client, listOf(note))
+                android.util.Log.d("MemmosDbg", "ai summary auto sync ok: $noteId")
+            } catch (e: Exception) {
+                android.util.Log.d("MemmosDbg", "ai summary auto sync fail: ${e.message}")
+            } finally {
+                syncingIds.remove(noteId)
+            }
         }
     }
 

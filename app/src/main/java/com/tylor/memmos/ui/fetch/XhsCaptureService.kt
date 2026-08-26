@@ -23,6 +23,7 @@ import com.tylor.memmos.data.ClipComment
 import com.tylor.memmos.data.ClipNote
 import com.tylor.memmos.data.ClipStore
 import com.tylor.memmos.net.DotsAi
+import com.tylor.memmos.net.AiSummaryRunner
 import com.tylor.memmos.net.XhsFetcher
 import com.tylor.memmos.util.AppPrefs
 import com.tylor.memmos.util.VideoSaverService
@@ -367,6 +368,8 @@ class XhsCaptureService : Service() {
                     if (i >= 0) {
                         l[i] = l[i].copy(aiSummary = sum, aiSummaryTs = System.currentTimeMillis())
                         st.save(l)
+                        // 生成的总结自动同步到 Obsidian（已配对时；失败静默，下次手动同步兜底）
+                        AiSummaryRunner.syncAfterGenerated(this@XhsCaptureService, id)
                     }
                 }
             }
