@@ -354,11 +354,12 @@ class XhsCaptureService : Service() {
         if (note.videoUrl != null && AppPrefs.autoDownloadVideo(this)) {
             VideoSaverService.start(this, note.id)
         }
-        // AI 总结（用户要求：剪藏完成后自动把 评论/视频/图片/正文 一次性喂给 AI 生成总结）
-        if (AppPrefs.aiSummaryEnabled(this) && AppPrefs.aiApiKey(this).isNotBlank()) {
+        // AI 总结（时机=剪藏完成后后台自动；点开帖子时/不生成 两个档位在详情页处理）
+        if (AppPrefs.aiSummaryMode(this) == 0 && AppPrefs.aiApiKey(this).isNotBlank()) {
             val id = note.id
+            val brief = AppPrefs.aiSummaryLevel(this) == "brief"
             aiJob.launch {
-                val sum = DotsAi.summarize(AppPrefs.aiApiKey(this@XhsCaptureService), note)
+                val sum = DotsAi.summarize(AppPrefs.aiApiKey(this@XhsCaptureService), note, brief)
                 if (sum != null) {
                     val st = ClipStore(this@XhsCaptureService)
                     val l = st.load()

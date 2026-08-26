@@ -28,6 +28,9 @@ object DotsAi {
         .readTimeout(180, TimeUnit.SECONDS) // 视频输入的 TTFT 可能很长（官方提醒）
         .build()
 
+    /** 极简档位提示词（用户要求：就一句话，不要废话） */
+    private const val BRIEF_PROMPT = "用几句话简要总结这篇内容，不要废话。"
+
     /** 总结提示词：覆盖正文/评论区/图片/视频，输出结构化中文 Markdown */
     private const val SYSTEM_PROMPT = """你是一个专业的内容总结助手。用户会提供一条小红书笔记的完整素材：
 正文、评论区、图片（可能多张）与视频。请综合所有素材，用中文输出一份 300 字以内的总结，包含：
@@ -38,7 +41,7 @@ object DotsAi {
 输出格式：第一行 `## AI 总结`，然后按小段落与要点列表组织；只输出总结本身，不要额外解释。"""
 
     /** 生成笔记 AI 总结；失败返回 null（不抛给 UI，UI 有手动重试） */
-    suspend fun summarize(apiKey: String, note: ClipNote): String? = withContext(Dispatchers.IO) {
+    suspend fun summarize(apiKey: String, note: ClipNote, brief: Boolean = false): String? = withContext(Dispatchers.IO) {
         if (apiKey.isBlank()) return@withContext null
         val blocks = JSONArray()
         fun text(t: String) {
@@ -85,7 +88,7 @@ object DotsAi {
                     .put(
                         JSONObject()
                             .put("role", "system")
-                            .put("content", JSONArray().put(JSONObject().put("type", "text").put("text", SYSTEM_PROMPT))),
+                            .put("content", JSONArray().put(JSONObject().put("type", "text").put("text", if (brief) BRIEF_PROMPT else SYSTEM_PROMPT))),
                     )
                     .put(JSONObject().put("role", "user").put("content", blocks)),
             )

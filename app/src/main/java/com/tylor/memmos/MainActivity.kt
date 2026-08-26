@@ -1003,7 +1003,8 @@ private fun SettingsPage(message: String?, onMessage: (String?) -> Unit, onSync:
 
         SectionLabel("AI 总结")
         Spacer(Modifier.height(10.dp))
-        var aiEnabled by remember { mutableStateOf(AppPrefs.aiSummaryEnabled(ctx)) }
+        var aiMode by remember { mutableStateOf(AppPrefs.aiSummaryMode(ctx)) }
+        var aiLevel by remember { mutableStateOf(AppPrefs.aiSummaryLevel(ctx)) }
         var aiKey by remember { mutableStateOf(AppPrefs.aiApiKey(ctx)) }
         Column(
             Modifier
@@ -1012,31 +1013,46 @@ private fun SettingsPage(message: String?, onMessage: (String?) -> Unit, onSync:
                 .border(1.dp, Color(0x26FFFFFF), RoundedCornerShape(16.dp))
                 .padding(horizontal = 14.dp, vertical = 12.dp),
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text("剪藏后自动生成总结", fontSize = 13.sp, color = TextHi.copy(alpha = 0.88f))
-                    Text("综合正文 / 图片 / 视频 / 评论生成 Markdown 总结", fontSize = 11.sp, color = TextFaint)
-                }
-                Box(
-                    Modifier
-                        .size(width = 44.dp, height = 26.dp)
-                        .clip(RoundedCornerShape(999.dp))
-                        .background(if (aiEnabled) AccentBrush else SolidColor(Color(0x33FFFFFF)))
-                        .clickable {
-                            aiEnabled = !aiEnabled
-                            AppPrefs.setAiSummaryEnabled(ctx, aiEnabled)
-                        },
-                ) {
-                    Box(
-                        Modifier
-                            .align(if (aiEnabled) Alignment.CenterEnd else Alignment.CenterStart)
-                            .padding(3.dp)
-                            .size(20.dp)
-                            .background(Color.White, CircleShape),
-                    )
-                }
+            Text("生成时机", fontSize = 12.sp, color = TextFaint)
+            Spacer(Modifier.height(8.dp))
+            Row(
+                Modifier
+                    .clip(RoundedCornerShape(999.dp))
+                    .background(IslandFill)
+                    .border(1.dp, Color(0x26FFFFFF), RoundedCornerShape(999.dp))
+                    .padding(4.dp),
+            ) {
+                AiSegChip("剪藏后", aiMode == 0) { aiMode = 0; AppPrefs.setAiSummaryMode(ctx, 0) }
+                Spacer(Modifier.width(4.dp))
+                AiSegChip("点开帖子", aiMode == 1) { aiMode = 1; AppPrefs.setAiSummaryMode(ctx, 1) }
+                Spacer(Modifier.width(4.dp))
+                AiSegChip("不生成", aiMode == 2) { aiMode = 2; AppPrefs.setAiSummaryMode(ctx, 2) }
             }
-            Spacer(Modifier.height(10.dp))
+            Text(
+                "剪藏后=后台自动生成；点开帖子=进详情才生成；不生成=详情显示「未设置 AI 总结」提醒",
+                fontSize = 10.sp, color = TextFaint, lineHeight = 15.sp,
+                modifier = Modifier.padding(top = 6.dp),
+            )
+            Spacer(Modifier.height(12.dp))
+            Text("总结档位", fontSize = 12.sp, color = TextFaint)
+            Spacer(Modifier.height(8.dp))
+            Row(
+                Modifier
+                    .clip(RoundedCornerShape(999.dp))
+                    .background(IslandFill)
+                    .border(1.dp, Color(0x26FFFFFF), RoundedCornerShape(999.dp))
+                    .padding(4.dp),
+            ) {
+                AiSegChip("常规总结", aiLevel == "full") { aiLevel = "full"; AppPrefs.setAiSummaryLevel(ctx, "full") }
+                Spacer(Modifier.width(4.dp))
+                AiSegChip("极简总结", aiLevel == "brief") { aiLevel = "brief"; AppPrefs.setAiSummaryLevel(ctx, "brief") }
+            }
+            Text(
+                "极简：用几句话简要总结，不要废话",
+                fontSize = 10.sp, color = TextFaint, lineHeight = 15.sp,
+                modifier = Modifier.padding(top = 6.dp),
+            )
+            Spacer(Modifier.height(12.dp))
             TextField(
                 value = aiKey,
                 onValueChange = { aiKey = it; AppPrefs.setAiApiKey(ctx, it) },
@@ -1055,7 +1071,7 @@ private fun SettingsPage(message: String?, onMessage: (String?) -> Unit, onSync:
                 modifier = Modifier.fillMaxWidth(),
             )
             Text(
-                "Key 仅保存在本机设置，不会上传/进入任何同步内容；可在 dots.ai/platform/apikeys 创建",
+                "Key 仅保存在本机设置，不会上传；可在 dots.ai/platform/apikeys 创建",
                 fontSize = 10.sp, color = TextFaint, lineHeight = 15.sp,
                 modifier = Modifier.padding(top = 6.dp),
             )
@@ -1421,6 +1437,21 @@ private fun fileBadge(ext: String): String = when (ext.lowercase()) {
 }
 
 /** 同步结果消息：两端一致时给出明确「无内容可同步」提示（用户要求） */
+/** 设置页分段选项（AI 总结用：白胶囊选中态） */
+@Composable
+private fun AiSegChip(label: String, selected: Boolean, onSelect: () -> Unit) {
+    Text(
+        label,
+        fontSize = 12.sp, fontWeight = FontWeight.Medium,
+        color = if (selected) Color(0xFF09090B) else TextSoft,
+        modifier = Modifier
+            .clip(RoundedCornerShape(999.dp))
+            .background(if (selected) Color.White else Color.Transparent)
+            .clickable { onSelect() }
+            .padding(horizontal = 14.dp, vertical = 7.dp),
+    )
+}
+
 private fun syncDoneMessage(r: SyncEngine.Result): String = when {
     r.uploaded == 0 && r.deleted == 0 ->
         "两端一致：手机内容已全部同步到 Obsidian（上传 0 · 失败 ${r.skipped}）"

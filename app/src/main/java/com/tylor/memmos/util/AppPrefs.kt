@@ -33,13 +33,22 @@ object AppPrefs {
             .putInt("maxComments", v.coerceIn(0, 500)).apply()
     }
 
-    /** AI 总结：抓取完成后自动调用 Dots 生成（默认开；key 存在才生效） */
-    fun aiSummaryEnabled(ctx: Context): Boolean =
-        ctx.getSharedPreferences(FILE, Context.MODE_PRIVATE).getBoolean("aiSummaryEnabled", true)
+    /** AI 总结生成时机：0=剪藏完成后后台自动 1=点开帖子时生成 2=不生成（详情显示提醒） */
+    fun aiSummaryMode(ctx: Context): Int =
+        ctx.getSharedPreferences(FILE, Context.MODE_PRIVATE).getInt("aiSummaryMode", 0)
 
-    fun setAiSummaryEnabled(ctx: Context, v: Boolean) {
+    fun setAiSummaryMode(ctx: Context, v: Int) {
         ctx.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit()
-            .putBoolean("aiSummaryEnabled", v).apply()
+            .putInt("aiSummaryMode", v.coerceIn(0, 2)).apply()
+    }
+
+    /** AI 总结档位：full=原始总结 brief=极简（一句话提示词） */
+    fun aiSummaryLevel(ctx: Context): String =
+        ctx.getSharedPreferences(FILE, Context.MODE_PRIVATE).getString("aiSummaryLevel", "full").orEmpty()
+
+    fun setAiSummaryLevel(ctx: Context, v: String) {
+        ctx.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit()
+            .putString("aiSummaryLevel", if (v == "brief") "brief" else "full").apply()
     }
 
     /** Dots API Key（仅存本机；切勿写入日志/仓库） */

@@ -1031,14 +1031,16 @@ private fun AiSummaryCard(note: ClipNote, ctx: Context, onSummary: (String) -> U
     var err by remember(note.id) { mutableStateOf<String?>(null) }
     var localSum by remember(note.id) { mutableStateOf(note.aiSummary) }
     val key = AppPrefs.aiApiKey(ctx)
-    val enabled = AppPrefs.aiSummaryEnabled(ctx)
+    val mode = AppPrefs.aiSummaryMode(ctx)
+    val brief = AppPrefs.aiSummaryLevel(ctx) == "brief"
+    val autoGen = mode == 1 // 时机=点开帖子时：进详情自动生成；0=后台已生成；2=不生成（仅提醒）
 
     fun gen() {
         if (generating || key.isBlank()) return
         generating = true
         err = null
         scope.launch {
-            val sum = DotsAi.summarize(key, note)
+            val sum = DotsAi.summarize(key, note, brief)
             generating = false
             if (sum != null) {
                 localSum = sum
@@ -1050,10 +1052,11 @@ private fun AiSummaryCard(note: ClipNote, ctx: Context, onSummary: (String) -> U
         }
     }
 
-    // 自动生成：开启且已配置 key、还没有摘要时
-    LaunchedEffect(note.id, note.aiSummaryTs, key, enabled) {
-        if (enabled && note.aiSummary == null && key.isNotBlank()) gen()
+    // 自动生成：时机=点开帖子 且已配置 key、还没有摘要时；不生成档位不自动、显示提醒
+    LaunchedEffect(note.id, note.aiSummaryTs, key, mode) {
+        if (mode == 1 && note.aiSummary == null && key.isNotBlank()) gen()
     }
+    val notConfigured = mode == 2
 
     Column(
         Modifier
@@ -1083,7 +1086,13 @@ private fun AiSummaryCard(note: ClipNote, ctx: Context, onSummary: (String) -> U
                 )
             }
         }
-        if (key.isBlank()) {
+        if (notConfigured) {
+            Spacer(Modifier.height(6.dp))
+            Text(
+                "当前未设置 AI 总结：到 设置 → AI 总结 选择「生成时机」后自动生成（Key 只存本机）",
+                fontSize = 11.sp, color = Color(0xFFFF5B6E), lineHeight = 16.sp,
+            )
+        } else if (key.isBlank()) {
             Spacer(Modifier.height(6.dp))
             Text(
                 "未配置 API Key：到 设置 → AI 总结 粘贴后自动生成（Key 只存本机）",
