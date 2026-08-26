@@ -1370,10 +1370,10 @@ private fun SettingsPage(message: String?, onMessage: (String?) -> Unit, onSync:
                         .padding(horizontal = 13.dp, vertical = 11.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
+                    var showPairAddr by remember { mutableStateOf(false) }
                     Box(Modifier.size(8.dp).background(Success, CircleShape))
                     Spacer(Modifier.width(8.dp))
                     Column(Modifier.weight(1f)) {
-                        var showPairAddr by remember { mutableStateOf(false) }
                         Text(
                             if (showPairAddr) "已配对：${info.host}:${info.port}"
                             else "已配对：${maskHost(info.host)}:${info.port}",
