@@ -128,7 +128,7 @@ fun IconGear(size: Dp, tint: Color, modifier: Modifier = Modifier) = GlyphIcon(s
 
 /** 眼睛（显示明文）：眼形弧线 + 瞳孔 */
 @Composable
-fun IconEye(size: Dp, tint: Color, modifier: Modifier = Modifier) = GlyphIcon(size, tint, modifier) { st ->
+fun IconEye(size: Dp, tint: Color, modifier: Modifier = Modifier) = GlyphIcon(size, tint, modifier, strokeWidth = 1.3f) { st ->
     drawArc(tint, startAngle = 200f, sweepAngle = 140f, useCenter = false,
         topLeft = Offset(2.5f, 6.8f), size = Size(19f, 12.4f), style = st)
     drawArc(tint, startAngle = 20f, sweepAngle = 140f, useCenter = false,
@@ -138,7 +138,7 @@ fun IconEye(size: Dp, tint: Color, modifier: Modifier = Modifier) = GlyphIcon(si
 
 /** 眼睛划掉（隐藏明文） */
 @Composable
-fun IconEyeOff(size: Dp, tint: Color, modifier: Modifier = Modifier) = GlyphIcon(size, tint, modifier) { st ->
+fun IconEyeOff(size: Dp, tint: Color, modifier: Modifier = Modifier) = GlyphIcon(size, tint, modifier, strokeWidth = 1.3f) { st ->
     drawArc(tint, startAngle = 200f, sweepAngle = 140f, useCenter = false,
         topLeft = Offset(2.5f, 6.8f), size = Size(19f, 12.4f), style = st)
     drawArc(tint, startAngle = 20f, sweepAngle = 140f, useCenter = false,
