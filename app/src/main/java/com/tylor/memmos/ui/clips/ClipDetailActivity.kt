@@ -46,6 +46,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -1096,7 +1097,15 @@ private fun AiSummaryCard(note: ClipNote, ctx: Context, onSummary: (String, Long
             }
             Spacer(Modifier.weight(1f))
             when {
-                running -> Text("生成中…", fontSize = 11.sp, color = TextFaint)
+                running -> Row(verticalAlignment = Alignment.CenterVertically) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(18.dp),
+                        strokeWidth = 2.2.dp,
+                        color = Color(0xFF6EE7B7),
+                    )
+                    Spacer(Modifier.width(7.dp))
+                    Text("生成中…", fontSize = 11.sp, color = TextFaint)
+                }
                 localSum != null -> Text(
                     "重新生成", fontSize = 12.sp, color = Color(0xFF6EE7B7),
                     modifier = Modifier.clickable { gen() },
@@ -1129,6 +1138,12 @@ private fun AiSummaryCard(note: ClipNote, ctx: Context, onSummary: (String, Long
             Text(
                 "生成于 ${ClipStore.fmtTime(note.aiSummaryTs)}",
                 fontSize = 10.sp, color = TextFaint,
+            )
+        } else if (running) {
+            Spacer(Modifier.height(6.dp))
+            Text(
+                "正在总结正文、图片、视频与评论…",
+                fontSize = 11.sp, color = TextFaint,
             )
         } else if (!running) {
             Spacer(Modifier.height(6.dp))

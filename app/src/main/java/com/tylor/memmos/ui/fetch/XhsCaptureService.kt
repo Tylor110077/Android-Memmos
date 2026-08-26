@@ -22,7 +22,6 @@ import com.tylor.memmos.R
 import com.tylor.memmos.data.ClipComment
 import com.tylor.memmos.data.ClipNote
 import com.tylor.memmos.data.ClipStore
-import com.tylor.memmos.net.DotsAi
 import com.tylor.memmos.net.AiSummaryRunner
 import com.tylor.memmos.net.XhsFetcher
 import com.tylor.memmos.util.AppPrefs
@@ -69,8 +68,6 @@ class XhsCaptureService : Service() {
 
     private val handler = Handler(Looper.getMainLooper())
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    /** AI 总结用独立协程：服务 4s 后 stopSelf 会 cancel scope，AI 调用需存活到完成 */
-    private val aiJob = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val videoCandidates = java.util.concurrent.CopyOnWriteArrayList<String>()
 
     /** 只认"标准正文图"形态：sns-webpic + 路径含 1040g/1040h/1060g…或 noteImage——
@@ -355,24 +352,10 @@ class XhsCaptureService : Service() {
         if (note.videoUrl != null && AppPrefs.autoDownloadVideo(this)) {
             VideoSaverService.start(this, note.id)
         }
-        // AI 总结（时机=剪藏完成后后台自动；点开帖子时/不生成 两个档位在详情页处理）
+        // AI 总结（时机=剪藏完成后后台自动；点开帖子时/不生成 两个档位在详情页处理）：
+        // 统一走 AiSummaryRunner——进程级存活、详情页立即显示「生成中」，完成后写库/通知/自动同步
         if (AppPrefs.aiSummaryMode(this) == 0 && AppPrefs.aiApiKey(this).isNotBlank()) {
-            val id = note.id
-            val brief = AppPrefs.aiSummaryLevel(this) == "brief"
-            aiJob.launch {
-                val sum = DotsAi.summarize(AppPrefs.aiApiKey(this@XhsCaptureService), note, brief)
-                if (sum != null) {
-                    val st = ClipStore(this@XhsCaptureService)
-                    val l = st.load()
-                    val i = l.indexOfFirst { it.id == id && (it.aiSummary ?: "").isBlank() }
-                    if (i >= 0) {
-                        l[i] = l[i].copy(aiSummary = sum, aiSummaryTs = System.currentTimeMillis())
-                        st.save(l)
-                        // 生成的总结自动同步到 Obsidian（已配对时；失败静默，下次手动同步兜底）
-                        AiSummaryRunner.syncAfterGenerated(this@XhsCaptureService, id)
-                    }
-                }
-            }
+            AiSummaryRunner.start(this, note.id)
         }
         // 完成文案区分：视频另走 VideoSaverService（独立「正在保存视频」通知）——
         // 只写「抓取完成」会让用户误以为视频也已保存好（用户反馈「悬浮窗提示已保存好，点开还在保存中」）
