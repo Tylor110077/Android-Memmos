@@ -152,8 +152,10 @@ object SyncEngine {
         MessageDigest.getInstance("SHA-256").digest(s.toByteArray()).joinToString("") { "%02x".format(it) }.take(16)
 
     /**
-     * 计划待传字节：md/总结（需要同步的笔记；指纹会变的）+ 每篇媒体
-     * （图片 HEAD 并行探测 + 本地视频实际大小）；探测失败记 0，上传时按实际补记。
+     * 计划待传字节（与 pushNote 同口径，显示「全部会传的量」）：
+     * md/总结按真实指纹比较——远端同内容不传，不同就计入（包括非「需要同步」但内容有变的笔记：
+     * Obsidian 改了、总结文件没同步过等）；媒体每篇都重推，图片 HEAD 并行探测 + 本地视频实际大小。
+     * 探测失败记 0，上传时按实际补记。
      */
     private suspend fun planBytes(
         client: SyncClient,
@@ -161,6 +163,7 @@ object SyncEngine {
         remote: Map<String, SyncClient.InvItem>,
         track: UploadTrack,
     ) {
+        val root = rootDir(client)
         val imgSizes: Map<String, Long> = coroutineScope {
             val jobs = ups.flatMap { n -> n.imageUrls.map { u -> async { u to (MediaDownloader.headSize(u) ?: 0L) } } }
             jobs.map { it.await() }.toMap()
@@ -168,10 +171,15 @@ object SyncEngine {
         for (note in ups) {
             val p = mdPath(client, note)
             val src = sourceFolder(note)
-            if (remote[p] == null || note.originPath != p) {
-                val (imgRefs, vidRef) = namedRefs(note)
-                track.addTotal(buildUploadMd(note, src, p, imgRefs, vidRef).toByteArray().size.toLong())
-                if (!note.aiSummary.isNullOrBlank()) track.addTotal(buildSummaryMd(note).toByteArray().size.toLong())
+            val folder = p.substringAfter("/origin content/").substringBeforeLast("/note.md")
+            val (imgRefs, vidRef) = namedRefs(note)
+            val md = buildUploadMd(note, src, p, imgRefs, vidRef)
+            if (remote[p]?.sha256 != sha16(md)) track.addTotal(md.toByteArray().size.toLong())
+            if (!note.aiSummary.isNullOrBlank()) {
+                val summaryMd = buildSummaryMd(note)
+                if (remote["$root/$src/AI summary/$folder/summary.md"]?.sha256 != sha16(summaryMd)) {
+                    track.addTotal(summaryMd.toByteArray().size.toLong())
+                }
             }
             note.imageUrls.forEach { u ->
                 track.plannedMedia[u] = imgSizes[u] ?: 0L
