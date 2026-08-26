@@ -1001,6 +1001,67 @@ private fun SettingsPage(message: String?, onMessage: (String?) -> Unit, onSync:
 
         Spacer(Modifier.height(10.dp))
 
+        SectionLabel("AI 总结")
+        Spacer(Modifier.height(10.dp))
+        var aiEnabled by remember { mutableStateOf(AppPrefs.aiSummaryEnabled(ctx)) }
+        var aiKey by remember { mutableStateOf(AppPrefs.aiApiKey(ctx)) }
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .background(Color(0x0DFFFFFF), RoundedCornerShape(16.dp))
+                .border(1.dp, Color(0x26FFFFFF), RoundedCornerShape(16.dp))
+                .padding(horizontal = 14.dp, vertical = 12.dp),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("剪藏后自动生成总结", fontSize = 13.sp, color = TextHi.copy(alpha = 0.88f))
+                    Text("综合正文 / 图片 / 视频 / 评论生成 Markdown 总结", fontSize = 11.sp, color = TextFaint)
+                }
+                Box(
+                    Modifier
+                        .size(width = 44.dp, height = 26.dp)
+                        .clip(RoundedCornerShape(999.dp))
+                        .background(if (aiEnabled) AccentBrush else SolidColor(Color(0x33FFFFFF)))
+                        .clickable {
+                            aiEnabled = !aiEnabled
+                            AppPrefs.setAiSummaryEnabled(ctx, aiEnabled)
+                        },
+                ) {
+                    Box(
+                        Modifier
+                            .align(if (aiEnabled) Alignment.CenterEnd else Alignment.CenterStart)
+                            .padding(3.dp)
+                            .size(20.dp)
+                            .background(Color.White, CircleShape),
+                    )
+                }
+            }
+            Spacer(Modifier.height(10.dp))
+            TextField(
+                value = aiKey,
+                onValueChange = { aiKey = it; AppPrefs.setAiApiKey(ctx, it) },
+                placeholder = { Text("Dots API Key（ak_ 开头）", fontSize = 12.sp, color = TextFaint) },
+                singleLine = true,
+                textStyle = LocalTextStyle.current.copy(fontSize = 12.sp, color = TextHi),
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = Color(0x0DFFFFFF),
+                    unfocusedContainerColor = Color(0x0DFFFFFF),
+                    focusedIndicatorColor = Color.Transparent,
+                    unfocusedIndicatorColor = Color.Transparent,
+                    focusedTextColor = TextHi,
+                    unfocusedTextColor = TextHi,
+                ),
+                shape = RoundedCornerShape(10.dp),
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Text(
+                "Key 仅保存在本机设置，不会上传/进入任何同步内容；可在 dots.ai/platform/apikeys 创建",
+                fontSize = 10.sp, color = TextFaint, lineHeight = 15.sp,
+                modifier = Modifier.padding(top = 6.dp),
+            )
+        }
+        Spacer(Modifier.height(22.dp))
+
         SectionLabel("悬浮窗")
         Spacer(Modifier.height(10.dp))
         // 按钮式整卡（用户要求）：整卡可点=动作；两行状态分别显示「权限/运行」

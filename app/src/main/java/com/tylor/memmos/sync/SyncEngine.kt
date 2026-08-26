@@ -169,8 +169,31 @@ object SyncEngine {
                 }.getOrNull()
             }
         }
-        val md = toMarkdown(note, imgRefs, vidRef)
+        var md = toMarkdown(note, imgRefs, vidRef)
+        val folder = path.substringAfter("/origin content/").substringBeforeLast("/note.md")
+        // AI 总结（用户要求）：note 在特定位置引用独立 "AI summary" 文件（Obsidian wiki link）
+        if (!note.aiSummary.isNullOrBlank()) {
+            md = md.replaceFirst(
+                "# ${note.title}",
+                "# ${note.title}\n\n## AI 总结\n\n[[AI summary/$folder/总结.md]]\n",
+            )
+        }
         val hash = sha16(md)
+        // AI summary 文件（note 之外独立生成；指纹不变跳过）
+        if (!note.aiSummary.isNullOrBlank()) {
+            val summaryPath = "$root/AI summary/$folder/总结.md"
+            val summaryMd = buildString {
+                appendLine("---")
+                appendLine("memmos-id: ${note.id}")
+                appendLine("source: ${note.pageUrl}")
+                appendLine("---")
+                appendLine()
+                append(note.aiSummary)
+            }
+            if (remote[summaryPath]?.sha256 != sha16(summaryMd)) {
+                client.postFile(summaryPath, summaryMd)
+            }
+        }
         if (remote[path]?.sha256 == hash) return false // 内容一致（含媒体引用）跳过
         // 调试日志：上传失败静默跳过会成为"已是最新"假象，必须可见
         android.util.Log.d("MemmosDbg", "pushStart ${note.title.take(12)} -> $path (img=${imgRefs.size}, vid=${vidRef != null})")

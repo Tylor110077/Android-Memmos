@@ -82,6 +82,7 @@ import com.tylor.memmos.ui.IconFullscreen
 import com.tylor.memmos.ui.IconFullscreenExit
 import com.tylor.memmos.ui.IconPause
 import com.tylor.memmos.ui.IconPlayFilled
+import com.tylor.memmos.net.DotsAi
 import com.tylor.memmos.ui.md.MarkdownView
 import com.tylor.memmos.util.AppPrefs
 import com.tylor.memmos.util.MediaSaver
@@ -206,6 +207,27 @@ private fun DetailContent(initial: ClipNote) {
                 TagPill("视频笔记")
             }
         }
+        /* ── AI 总结（用户要求：放上面第一眼能看到，可交互生成/重试） ── */
+        Spacer(Modifier.height(14.dp))
+        AiSummaryCard(
+            note = cur,
+            ctx = ctx,
+            onSummary = { sum ->
+                cur = cur.copy(aiSummary = sum, aiSummaryTs = System.currentTimeMillis())
+                scope.launch {
+                    withContext(Dispatchers.IO) {
+                        runCatching {
+                            val st = ClipStore(ctx)
+                            val l = st.load()
+                            val i = l.indexOfFirst { it.id == cur.id }
+                            if (i >= 0) { l[i] = l[i].copy(aiSummary = sum, aiSummaryTs = System.currentTimeMillis()); st.save(l) }
+                        }
+                    }
+                }
+            },
+        )
+        Spacer(Modifier.height(6.dp))
+
         /* ── 媒体区：在正文上方（用户要求）──
            视频笔记：封面 + 播放按钮，点击播放（未下载则自动下载后播放）
            图文笔记：多图 Pager / 单图，点击进全屏查看器 */
@@ -998,6 +1020,95 @@ private fun persist(ctx: Context, note: ClipNote) {
     val idx = list.indexOfFirst { it.id == note.id }
     if (idx >= 0) list[idx] = note
     ClipStore(ctx).save(list)
+}
+
+/** AI 总结卡：详情页顶部第一眼可见；已配置 key 时自动生成，可手动重新生成/折叠 */
+@Composable
+private fun AiSummaryCard(note: ClipNote, ctx: Context, onSummary: (String) -> Unit) {
+    val scope = rememberCoroutineScope()
+    var expanded by remember(note.id) { mutableStateOf(note.aiSummary != null) }
+    var generating by remember(note.id) { mutableStateOf(false) }
+    var err by remember(note.id) { mutableStateOf<String?>(null) }
+    var localSum by remember(note.id) { mutableStateOf(note.aiSummary) }
+    val key = AppPrefs.aiApiKey(ctx)
+    val enabled = AppPrefs.aiSummaryEnabled(ctx)
+
+    fun gen() {
+        if (generating || key.isBlank()) return
+        generating = true
+        err = null
+        scope.launch {
+            val sum = DotsAi.summarize(key, note)
+            generating = false
+            if (sum != null) {
+                localSum = sum
+                expanded = true
+                onSummary(sum)
+            } else {
+                err = "生成失败：请检查网络 / 设置里的 API Key"
+            }
+        }
+    }
+
+    // 自动生成：开启且已配置 key、还没有摘要时
+    LaunchedEffect(note.id, note.aiSummaryTs, key, enabled) {
+        if (enabled && note.aiSummary == null && key.isNotBlank()) gen()
+    }
+
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(Color(0x12FFFFFF))
+            .border(1.dp, Color(0x26FFFFFF), RoundedCornerShape(16.dp))
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("AI 总结", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextHi)
+            Spacer(Modifier.width(8.dp))
+            if (expanded || localSum != null) {
+                Text("▾", fontSize = 12.sp, color = TextFaint)
+                Spacer(Modifier.width(4.dp))
+            }
+            Spacer(Modifier.weight(1f))
+            when {
+                generating -> Text("生成中…", fontSize = 11.sp, color = TextFaint)
+                localSum != null -> Text(
+                    "重新生成", fontSize = 12.sp, color = Color(0xFF6EE7B7),
+                    modifier = Modifier.clickable { gen() },
+                )
+                else -> Text(
+                    "生成", fontSize = 12.sp, color = Color(0xFF6EE7B7),
+                    modifier = Modifier.clickable { gen() },
+                )
+            }
+        }
+        if (key.isBlank()) {
+            Spacer(Modifier.height(6.dp))
+            Text(
+                "未配置 API Key：到 设置 → AI 总结 粘贴后自动生成（Key 只存本机）",
+                fontSize = 11.sp, color = TextFaint, lineHeight = 16.sp,
+            )
+        } else if (expanded && localSum != null) {
+            Spacer(Modifier.height(8.dp))
+            MarkdownView(
+                md = localSum!!,
+                vaultRoot = File(ctx.filesDir, "vault"),
+            )
+            Spacer(Modifier.height(6.dp))
+            Text(
+                "生成于 ${ClipStore.fmtTime(note.aiSummaryTs)}",
+                fontSize = 10.sp, color = TextFaint,
+            )
+        } else if (!generating) {
+            Spacer(Modifier.height(6.dp))
+            Text(
+                err ?: "点击「生成」：AI 将对正文、图片、视频与评论做综合总结",
+                fontSize = 11.sp, color = if (err != null) Color(0xFFFF5B6E) else TextFaint,
+                lineHeight = 16.sp,
+            )
+        }
+    }
 }
 
 /** 评论卡片：头像 + 昵称 + 内容 + 点赞；indent=true 为子评论（缩进+浅底） */

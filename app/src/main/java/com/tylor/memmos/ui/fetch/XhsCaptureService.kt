@@ -22,6 +22,7 @@ import com.tylor.memmos.R
 import com.tylor.memmos.data.ClipComment
 import com.tylor.memmos.data.ClipNote
 import com.tylor.memmos.data.ClipStore
+import com.tylor.memmos.net.DotsAi
 import com.tylor.memmos.net.XhsFetcher
 import com.tylor.memmos.util.AppPrefs
 import com.tylor.memmos.util.VideoSaverService
@@ -67,6 +68,8 @@ class XhsCaptureService : Service() {
 
     private val handler = Handler(Looper.getMainLooper())
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    /** AI 总结用独立协程：服务 4s 后 stopSelf 会 cancel scope，AI 调用需存活到完成 */
+    private val aiJob = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val videoCandidates = java.util.concurrent.CopyOnWriteArrayList<String>()
 
     /** 只认"标准正文图"形态：sns-webpic + 路径含 1040g/1040h/1060g…或 noteImage——
@@ -350,6 +353,22 @@ class XhsCaptureService : Service() {
         // 视频交后台保存服务（通知进度条）
         if (note.videoUrl != null && AppPrefs.autoDownloadVideo(this)) {
             VideoSaverService.start(this, note.id)
+        }
+        // AI 总结（用户要求：剪藏完成后自动把 评论/视频/图片/正文 一次性喂给 AI 生成总结）
+        if (AppPrefs.aiSummaryEnabled(this) && AppPrefs.aiApiKey(this).isNotBlank()) {
+            val id = note.id
+            aiJob.launch {
+                val sum = DotsAi.summarize(AppPrefs.aiApiKey(this@XhsCaptureService), note)
+                if (sum != null) {
+                    val st = ClipStore(this@XhsCaptureService)
+                    val l = st.load()
+                    val i = l.indexOfFirst { it.id == id && (it.aiSummary ?: "").isBlank() }
+                    if (i >= 0) {
+                        l[i] = l[i].copy(aiSummary = sum, aiSummaryTs = System.currentTimeMillis())
+                        st.save(l)
+                    }
+                }
+            }
         }
         // 完成文案区分：视频另走 VideoSaverService（独立「正在保存视频」通知）——
         // 只写「抓取完成」会让用户误以为视频也已保存好（用户反馈「悬浮窗提示已保存好，点开还在保存中」）

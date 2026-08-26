@@ -33,6 +33,24 @@ object AppPrefs {
             .putInt("maxComments", v.coerceIn(0, 500)).apply()
     }
 
+    /** AI 总结：抓取完成后自动调用 Dots 生成（默认开；key 存在才生效） */
+    fun aiSummaryEnabled(ctx: Context): Boolean =
+        ctx.getSharedPreferences(FILE, Context.MODE_PRIVATE).getBoolean("aiSummaryEnabled", true)
+
+    fun setAiSummaryEnabled(ctx: Context, v: Boolean) {
+        ctx.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit()
+            .putBoolean("aiSummaryEnabled", v).apply()
+    }
+
+    /** Dots API Key（仅存本机；切勿写入日志/仓库） */
+    fun aiApiKey(ctx: Context): String =
+        ctx.getSharedPreferences(FILE, Context.MODE_PRIVATE).getString("aiApiKey", "").orEmpty()
+
+    fun setAiApiKey(ctx: Context, v: String) {
+        ctx.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit()
+            .putString("aiApiKey", v.trim()).apply()
+    }
+
     /** 用户是否启动过悬浮窗服务（App 启动时自动恢复用） */
     fun serviceWanted(ctx: Context): Boolean =
         ctx.getSharedPreferences(FILE, Context.MODE_PRIVATE).getBoolean("serviceWanted", false)

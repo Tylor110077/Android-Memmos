@@ -43,6 +43,10 @@ data class ClipNote(
     val comments: List<ClipComment> = emptyList(),
     /** 视频已保存到系统相册 */
     val inGallery: Boolean = false,
+    /** AI 总结（Dots 多模态生成，内容/评论/图/视频理解） */
+    val aiSummary: String? = null,
+    /** AI 总结生成时间（0=未生成） */
+    val aiSummaryTs: Long = 0L,
 )
 
 /**
@@ -91,6 +95,8 @@ class ClipStore(context: Context) {
         localVideoPath = o.optString("localVideo").takeIf { it.isNotEmpty() },
         avatarUrl = o.optString("avatarUrl"),
         inGallery = o.optBoolean("inGallery"),
+        aiSummary = o.optString("aiSummary").takeIf { it.isNotEmpty() },
+        aiSummaryTs = o.optLong("aiSummaryTs"),
         comments = runCatching {
             val arr = o.getJSONArray("comments")
             val cs = List(arr.length()) { i ->
@@ -146,6 +152,8 @@ class ClipStore(context: Context) {
                     .put("localVideo", n.localVideoPath ?: "")
                     .put("avatarUrl", n.avatarUrl)
                     .put("inGallery", n.inGallery)
+                    .put("aiSummary", n.aiSummary ?: "")
+                    .put("aiSummaryTs", n.aiSummaryTs)
                     .put("comments", JSONArray().apply {
                         n.comments.forEach { c ->
                             put(JSONObject().apply {
