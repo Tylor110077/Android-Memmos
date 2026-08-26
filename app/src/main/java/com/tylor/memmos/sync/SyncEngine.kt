@@ -32,15 +32,20 @@ object SyncEngine {
 
     private fun rootDir(client: SyncClient): String = client.rootFolder.ifBlank { "Memmos graph" }
 
-    /** 手机剪藏 → Obsidian md 路径（用户要求：二个顶层文件夹 + 每帖一夹，双向识别稳定）：
-     * {根}/media/  ← 全部图片/视频；{根}/origin content/{标题文件夹}/note.md
-     * 文件名固定 note.md；标题变化不影响 memo 内部 memmos-id 匹配
-     */
+    /** 内容源 → Obsidian 大文件夹（按源隔离；bilibili 预留 → 后续抓取自动归入）
+     * 当前来源：xhs=小红书；未知兜底「小红书」 */
+    private fun sourceFolder(note: ClipNote): String =
+        if (note.origin == "bilibili") "哔哩哔哩" else "小红书"
+
+    /** 手机剪藏 → Obsidian md 路径（用户要求：{根}/{源}/origin content/{标题}/note.md）：
+     * {根}/{源}/media/ ← 该源全部图片/视频；{根}/{源}/AI summary/{标题}/总结.md
+     * 文件名固定 note.md；标题变化不影响 memo 内部 memmos-id 匹配 */
     private fun mdPath(client: SyncClient, note: ClipNote): String {
         val root = rootDir(client)
+        val src = sourceFolder(note)
         val folder = note.title.replace(Regex("""[\\/:*?"<>|]"""), "-").trim()
             .replace(Regex("""\s+"""), "-").take(45).ifBlank { "未命名" }
-        return "$root/origin content/$folder/note.md"
+        return "$root/$src/origin content/$folder/note.md"
     }
 
     /**
@@ -145,15 +150,16 @@ object SyncEngine {
     ): Boolean {
         val path = mdPath(client, note)
         val root = rootDir(client)
-        // 结构：媒体统一 {根}/media/；md 在 {根}/origin content/{标题}/note.md → ../../media/
+        val src = sourceFolder(note)
+        // 结构：媒体统一 {根}/{源}/media/；md 在 {根}/{源}/origin content/{标题}/note.md → ../../media/
         val relPrefix = "../../media"
-        // 媒体上传：图片/视频下载字节 → base64 推到 Obsidian {根}/media/（与插件同目录布局）
+        // 媒体上传：图片/视频下载字节 → base64 推到 Obsidian {根}/{源}/media/
         val imgRefs = mutableListOf<String>()
         note.imageUrls.forEachIndexed { i, u ->
             val rel = runCatching {
                 val bytes = MediaDownloader.downloadBytes(u)
                 val name = "${note.id.take(12)}-${i + 1}.${if (u.contains(".png", true)) "png" else "jpg"}"
-                client.postBinary("$root/media/$name", bytes)
+                client.postBinary("$root/$src/media/$name", bytes)
                 "$relPrefix/$name"
             }.getOrElse { u }
             imgRefs.add(rel)
@@ -164,7 +170,7 @@ object SyncEngine {
             if (f.exists()) {
                 vidRef = runCatching {
                     val name = "${note.id.take(12)}.mp4"
-                    client.postBinary("$root/media/$name", f.readBytes())
+                    client.postBinary("$root/$src/media/$name", f.readBytes())
                     "$relPrefix/$name"
                 }.getOrNull()
             }
@@ -175,13 +181,13 @@ object SyncEngine {
         if (!note.aiSummary.isNullOrBlank()) {
             md = md.replaceFirst(
                 "# ${note.title}",
-                "# ${note.title}\n\n## AI 总结\n\n[[AI summary/$folder/总结.md]]\n",
+                "# ${note.title}\n\n## AI 总结\n\n[[$src/AI summary/$folder/总结.md]]\n",
             )
         }
         val hash = sha16(md)
         // AI summary 文件（note 之外独立生成；指纹不变跳过）
         if (!note.aiSummary.isNullOrBlank()) {
-            val summaryPath = "$root/AI summary/$folder/总结.md"
+            val summaryPath = "$root/$src/AI summary/$folder/总结.md"
             val summaryMd = buildString {
                 appendLine("---")
                 appendLine("memmos-id: ${note.id}")
@@ -250,9 +256,10 @@ object SyncEngine {
             val postId = POST_ID_RE.find(md)?.groupValues?.get(1) ?: continue
             if (postId in myPostIds) continue
             val prefix = "${postId.take(12)}"
+            val srcDir = path.substringBefore("/origin content/") // {根}/{源}
             runCatching { client.deleteFile(path) }
                 .onFailure { android.util.Log.d("MemmosDbg", "remote delete md fail $path: ${it.message}") }
-            remote.keys.filter { it.startsWith("$root/media/$prefix") }.forEach { a ->
+            remote.keys.filter { it.startsWith("$srcDir/media/$prefix") }.forEach { a ->
                 runCatching { client.deleteFile(a) }
                     .onFailure { android.util.Log.d("MemmosDbg", "remote delete media fail $a: ${it.message}") }
             }
