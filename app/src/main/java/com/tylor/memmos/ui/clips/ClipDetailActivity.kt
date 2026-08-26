@@ -202,8 +202,11 @@ private fun DetailContent(initial: ClipNote) {
                 },
                 fontSize = 13.sp, color = TextMid,
             )
+            val st = sourceTag(cur.origin)
+            Spacer(Modifier.width(10.dp))
+            TagPill(st.label, st.fg)
             if (cur.type == "video") {
-                Spacer(Modifier.width(10.dp))
+                Spacer(Modifier.width(8.dp))
                 TagPill("视频笔记")
             }
         }
@@ -1171,12 +1174,20 @@ private fun MdInlineView(md: String, originPath: String?) {
     MarkdownView(md = md, originPath = originPath, vaultRoot = java.io.File(ctx.filesDir, "vault"))
 }
 
+private data class DetailSourceTag(val label: String, val fg: Color)
+
+private fun sourceTag(origin: String): DetailSourceTag = when (origin) {
+    "bilibili" -> DetailSourceTag("哔哩哔哩", Color(0xFF9EC5FF))
+    "douyin" -> DetailSourceTag("抖音", Color(0xFF7FD8D0))
+    else -> DetailSourceTag("小红书", Color(0xFFA7F3D0))
+}
+
 @Composable
-private fun TagPill(text: String) {
+private fun TagPill(text: String, fg: Color = Color(0xFFA7F3D0)) {
     Text(
         text,
         fontSize = 11.sp,
-        color = Color(0xFFA7F3D0),
+        color = fg,
         modifier = Modifier
             .background(Color(0x2E10B981), RoundedCornerShape(999.dp))
             .border(1.dp, Color(0x6610B981), RoundedCornerShape(999.dp))

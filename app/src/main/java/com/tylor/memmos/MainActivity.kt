@@ -555,10 +555,13 @@ private fun LibraryPage(
     var pendingDelete by remember { mutableStateOf<ClipNote?>(null) }
     var selecting by remember { mutableStateOf(false) }
     var selected by remember { mutableStateOf(setOf<String>()) }
-    val filtered = if (query.isBlank()) clips else clips.filter {
+    var sourceFilter by remember { mutableStateOf<String?>(null) } // null=全部
+    val searched = if (query.isBlank()) clips else clips.filter {
         it.title.contains(query, true) || it.author.contains(query, true) ||
             it.tags.any { t -> t.contains(query, true) } || it.desc.contains(query, true)
     }
+    val filtered = if (sourceFilter == null) searched
+        else searched.filter { sourceKey(it.origin) == sourceFilter }
 
     fun exitSelection() { selecting = false; selected = emptySet() }
 
@@ -616,6 +619,24 @@ private fun LibraryPage(
                 .fillMaxWidth()
                 .padding(horizontal = 20.dp),
         )
+        if (!selecting) {
+            Row(
+                Modifier
+                    .padding(horizontal = 20.dp, vertical = 2.dp)
+                    .clip(RoundedCornerShape(999.dp))
+                    .background(IslandFill)
+                    .border(1.dp, Color(0x26FFFFFF), RoundedCornerShape(999.dp))
+                    .padding(4.dp),
+            ) {
+                AiSegChip("全部", sourceFilter == null) { sourceFilter = null }
+                Spacer(Modifier.width(4.dp))
+                AiSegChip("小红书", sourceFilter == "xiaohongshu") { sourceFilter = "xiaohongshu" }
+                Spacer(Modifier.width(4.dp))
+                AiSegChip("哔哩哔哩", sourceFilter == "bilibili") { sourceFilter = "bilibili" }
+                Spacer(Modifier.width(4.dp))
+                AiSegChip("抖音", sourceFilter == "douyin") { sourceFilter = "douyin" }
+            }
+        }
         Text(
             if (selecting) "已选 ${selected.size} / 共 ${filtered.size} 篇"
             else "共 ${filtered.size} 篇 · 长按或点「编辑」进入多选",
@@ -1451,6 +1472,33 @@ private fun SettingsPage(message: String?, onMessage: (String?) -> Unit, onSync:
 
 /* ═══════════════ 共用组件 ═══════════════ */
 
+/** 内容源标识（手机端分类）：xhs=小红书 bilibili=哔哩哔哩 douyin=抖音；未知兜底小红书 */
+private data class SourceTag(val key: String, val label: String, val fg: Color)
+
+private fun sourceKey(origin: String): String = when (origin) {
+    "bilibili" -> "bilibili"
+    "douyin" -> "douyin"
+    else -> "xiaohongshu"
+}
+
+private fun sourceTag(origin: String): SourceTag = when (sourceKey(origin)) {
+    "bilibili" -> SourceTag("bilibili", "哔哩哔哩", Color(0xFF9EC5FF))
+    "douyin" -> SourceTag("douyin", "抖音", Color(0xFF7FD8D0))
+    else -> SourceTag("xiaohongshu", "小红书", Color(0xFFA7F3D0))
+}
+
+/** 源小标：玻璃小胶囊 + 源名字（列表/面板/详情共用样式） */
+@Composable
+private fun SourcePill(origin: String, modifier: Modifier = Modifier) {
+    val t = sourceTag(origin)
+    Text(
+        t.label,
+        fontSize = 9.5.sp, color = t.fg,
+        modifier = modifier.background(Color(0x14FFFFFF), RoundedCornerShape(999.dp))
+            .padding(horizontal = 7.dp, vertical = 2.dp),
+    )
+}
+
 private fun fileBadge(ext: String): String = when (ext.lowercase()) {
     "pdf" -> "PDF"
     "docx", "doc" -> "W"
@@ -1656,6 +1704,8 @@ private fun ClipRow(
                     fontSize = 11.sp, color = TextSoft,
                 )
             }
+            Spacer(Modifier.width(6.dp))
+            SourcePill(note.origin)
             if (onRemove != null) {
                 Spacer(Modifier.width(6.dp))
                 Text(

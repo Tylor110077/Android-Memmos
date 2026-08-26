@@ -240,6 +240,14 @@ fun CapturePanel(
 }
 
 /** 配对状态：读真实 SyncPrefs（演示版为写死文案，已替换） */
+private data class PanelSourceTag(val label: String, val fg: Color)
+
+private fun sourceTag(origin: String): PanelSourceTag = when (origin) {
+    "bilibili" -> PanelSourceTag("哔哩哔哩", Color(0xFF9EC5FF))
+    "douyin" -> PanelSourceTag("抖音", Color(0xFF7FD8D0))
+    else -> PanelSourceTag("小红书", Color(0xFFA7F3D0))
+}
+
 @Composable
 private fun PairedChip(paired: Boolean) {
     Row(
@@ -326,9 +334,21 @@ private fun RecentRow(note: com.tylor.memmos.data.ClipNote, onClick: () -> Unit)
                     fontSize = 10.sp, color = TextSoft,
                 )
             }
-            if (note.type == "video") {
-                Text("视频", fontSize = 9.5.sp, color = ChipText,
-                    modifier = Modifier.background(ChipBg, RoundedCornerShape(999.dp)).padding(horizontal = 7.dp, vertical = 2.dp))
+            Column(
+                Modifier.align(Alignment.CenterVertically),
+                horizontalAlignment = Alignment.End,
+            ) {
+                val t = sourceTag(note.origin)
+                Text(
+                    t.label, fontSize = 9.5.sp, color = t.fg,
+                    modifier = Modifier.background(Color(0x14FFFFFF), RoundedCornerShape(999.dp))
+                        .padding(horizontal = 7.dp, vertical = 2.dp),
+                )
+                if (note.type == "video") {
+                    Spacer(Modifier.height(4.dp))
+                    Text("视频", fontSize = 9.5.sp, color = ChipText,
+                        modifier = Modifier.background(ChipBg, RoundedCornerShape(999.dp)).padding(horizontal = 7.dp, vertical = 2.dp))
+                }
             }
         }
     }
