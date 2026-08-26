@@ -277,12 +277,18 @@ class XhsCaptureService : Service() {
             val httpNote = withContext(Dispatchers.IO) {
                 runCatching { XhsFetcher.fetch(" $noteUrl") }.getOrNull()
             }
+            android.util.Log.d(
+                "MemmosDbg",
+                "title dbg: dom=${domNote.title.take(24)} http=${httpNote?.title?.take(24) ?: "-"}",
+            )
             val merged = domNote.copy(
                 // 抓取与落库一律用长链：httpNote 来自 fetch（短链已展开），最稳的锚；DOM 兜底
                 pageUrl = httpNote?.pageUrl?.takeIf { it.contains("discovery/item") || it.contains("explore") }
                     ?: domNote.pageUrl,
-                title = domNote.title.takeIf { it != "未命名笔记" }
-                    ?: httpNote?.title.orEmpty().ifBlank { domNote.title },
+                // 标题与图片同源原则：__INITIAL_STATE__ noteDetailMap 的标题是权威链
+                // （视频页 DOM 的 #detail-title/.title/document.title 会命中相关推荐/页面标题 → 标题错误）
+                title = httpNote?.title?.takeIf { it.isNotBlank() }
+                    ?: domNote.title.takeIf { it != "未命名笔记" } ?: "未命名笔记",
                 desc = domNote.desc.ifBlank { httpNote?.desc.orEmpty() },
                 author = domNote.author.ifBlank { httpNote?.author.orEmpty() },
                 avatarUrl = domNote.avatarUrl.ifBlank { httpNote?.avatarUrl.orEmpty() },
