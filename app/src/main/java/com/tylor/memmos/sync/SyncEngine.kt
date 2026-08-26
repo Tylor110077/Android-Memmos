@@ -8,6 +8,8 @@ import com.tylor.memmos.data.ClipStore
 import com.tylor.memmos.net.MediaDownloader
 import com.tylor.memmos.util.AppPrefs
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.withContext
 import java.security.MessageDigest
@@ -106,11 +108,21 @@ object SyncEngine {
     }
 
     /**
-     * 同步进度（用户要求进度条）：done/total 按阶段推进，null=空闲。
-     * SettingsPage 据此显示进度条；同步期间 UI 可轮询刷新。
+     * 同步进度（用户要求进度条 + 字节量）：done/total 按阶段推进，
+     * doneBytes/totalBytes 为已上传/待传字节（媒体 HEAD 探测 + md/总结文本精确值），
+     * 百分比据此计算；null=空闲。SettingsPage 据此显示进度条；同步期间 UI 可轮询刷新。
      */
-    data class SyncProgress(val phase: String, val done: Int, val total: Int) {
-        val fraction: Float get() = if (total > 0) done.toFloat() / total else 0f
+    data class SyncProgress(
+        val phase: String,
+        val done: Int,
+        val total: Int,
+        val doneBytes: Long,
+        val totalBytes: Long,
+    ) {
+        /** 字节进度为主；极端情况（全为 0）退回文件计数 */
+        val fraction: Float
+            get() = if (totalBytes > 0) (doneBytes.toFloat() / totalBytes).coerceIn(0f, 1f)
+            else if (total > 0) done.toFloat() / total else 0f
     }
 
     val progress = MutableStateFlow<SyncProgress?>(null)
@@ -118,28 +130,127 @@ object SyncEngine {
     /** 最近一次同步结果消息（显示在同步进度位置；null=还没有同步过） */
     val lastSyncMsg = MutableStateFlow<String?>(null)
 
+    /** 字节进度追踪器：total/done 由引擎累计；文件内流式进度用 startFile/fileFrac 推进 */
+    private class UploadTrack {
+        var total = 0L; private set
+        var done = 0L; private set
+        /** 计划阶段探测到的媒体大小（url → 字节）；0 表示探测失败，上传时按实际补记 */
+        val plannedMedia = HashMap<String, Long>()
+        /** 值变化后回调（引擎用来刷新 progress 流） */
+        var onChange: (() -> Unit)? = null
+
+        fun addTotal(n: Long) { total += n; onChange?.invoke() }
+
+        private var fileBase = 0L
+        private var fileLen = 0L
+        fun startFile(len: Long) { fileBase = done; fileLen = len }
+        fun fileFrac(f: Float) { done = fileBase + (fileLen * f).toLong(); onChange?.invoke() }
+        fun finishFile() { done = fileBase + fileLen; onChange?.invoke() }
+    }
+
     private fun sha16(s: String): String =
         MessageDigest.getInstance("SHA-256").digest(s.toByteArray()).joinToString("") { "%02x".format(it) }.take(16)
 
     /**
+     * 计划待传字节：md/总结（需要同步的笔记；指纹会变的）+ 每篇媒体
+     * （图片 HEAD 并行探测 + 本地视频实际大小）；探测失败记 0，上传时按实际补记。
+     */
+    private suspend fun planBytes(
+        client: SyncClient,
+        ups: List<ClipNote>,
+        remote: Map<String, SyncClient.InvItem>,
+        track: UploadTrack,
+    ) {
+        val imgSizes: Map<String, Long> = coroutineScope {
+            val jobs = ups.flatMap { n -> n.imageUrls.map { u -> async { u to (MediaDownloader.headSize(u) ?: 0L) } } }
+            jobs.map { it.await() }.toMap()
+        }
+        for (note in ups) {
+            val p = mdPath(client, note)
+            val src = sourceFolder(note)
+            if (remote[p] == null || note.originPath != p) {
+                val (imgRefs, vidRef) = namedRefs(note)
+                track.addTotal(buildUploadMd(note, src, p, imgRefs, vidRef).toByteArray().size.toLong())
+                if (!note.aiSummary.isNullOrBlank()) track.addTotal(buildSummaryMd(note).toByteArray().size.toLong())
+            }
+            note.imageUrls.forEach { u ->
+                track.plannedMedia[u] = imgSizes[u] ?: 0L
+                track.addTotal(track.plannedMedia[u]!!)
+            }
+            val vp = note.localVideoPath
+            if (vp != null) {
+                val vf = java.io.File(vp)
+                if (vf.exists()) {
+                    track.plannedMedia[note.videoUrl ?: vp] = vf.length()
+                    track.addTotal(vf.length())
+                }
+            }
+        }
+    }
+
+    /**
      * 批量上传指定剪藏（多选编辑用）：去重逻辑与 sync 相同，
-     * 返回实际上传条数；originPath 写回本地库。
+     * 返回实际上传条数；originPath 写回本地库。带字节进度（计划+流式）。
      */
     suspend fun uploadNotes(ctx: Context, client: SyncClient, notes: List<ClipNote>): Int = withContext(Dispatchers.IO) {
         val store = ClipStore(ctx)
         val local = store.load()
         val remote = client.inventory().associateBy { it.path }
+        val ups = notes.filter { it.origin != "vault" }
+        if (ups.isEmpty()) return@withContext 0
         var up = 0
-        for (note in notes.filter { it.origin != "vault" }) {
-            if (pushNote(ctx, client, note, local, remote)) up++
+        val track = UploadTrack()
+        planBytes(client, ups, remote, track)
+        val onChange = { progress.value = SyncProgress("上传选中", up, ups.size, track.done, track.total) }
+        track.onChange = onChange
+        progress.value = SyncProgress("上传选中", 0, ups.size, 0, track.total)
+        for (note in ups) {
+            if (pushNote(ctx, client, note, local, remote, track)) up++
+            onChange()
         }
         store.save(local)
+        progress.value = null
         return@withContext up
     }
 
+    /** 上传后的媒体相对引用（文件名 id12-序号 / id12.mp4，与下载成败无关的命名规则，计划期可先算 md） */
+    private fun namedRefs(note: ClipNote): Pair<List<String>, String?> {
+        val imgs = note.imageUrls.mapIndexed { i, u ->
+            val ext = if (u.contains(".png", true)) "png" else "jpg"
+            "../../media/${note.id.take(12)}-${i + 1}.$ext"
+        }
+        val vid = if (note.localVideoPath?.let { java.io.File(it).exists() } == true) {
+            "../../media/${note.id.take(12)}.mp4"
+        } else null
+        return imgs to vid
+    }
+
+    /** 最终上传 md：toMarkdown + AI 总结 wiki link（与 pushNote 共用，计划期算字节用） */
+    private fun buildUploadMd(note: ClipNote, src: String, path: String, imgRefs: List<String>, vidRef: String?): String {
+        val folder = path.substringAfter("/origin content/").substringBeforeLast("/note.md")
+        var md = toMarkdown(note, imgRefs, vidRef)
+        if (!note.aiSummary.isNullOrBlank()) {
+            md = md.replaceFirst(
+                "# ${note.title}",
+                "# ${note.title}\n\n## AI 总结\n\n[[$src/AI summary/$folder/summary.md]]\n",
+            )
+        }
+        return md
+    }
+
+    private fun buildSummaryMd(note: ClipNote): String = buildString {
+        appendLine("---")
+        appendLine("memmos-id: ${note.id}")
+        appendLine("source: ${note.pageUrl}")
+        appendLine("---")
+        appendLine()
+        append(note.aiSummary)
+    }
+
     /**
-     * 推一篇剪藏到 Obsidian：图片/视频（本地已下载）→ {目录}/小红书/media/ 并改相对引用，
+     * 推一篇剪藏到 Obsidian：图片/视频（本地已下载）→ {目录}/{源}/media/ 并改相对引用，
      * md 用 toMarkdown 全内容格式（评论/作者/头像/标签/视频嵌入）；远端同指纹则跳过。
+     * 字节进度：媒体按流式比例推进，md/总结按实际内容计；HEAD 计划为 0 的文件按实际补记。
      */
     private suspend fun pushNote(
         ctx: Context,
@@ -147,6 +258,7 @@ object SyncEngine {
         note: ClipNote,
         local: MutableList<ClipNote>,
         remote: Map<String, SyncClient.InvItem>,
+        track: UploadTrack,
     ): Boolean {
         val path = mdPath(client, note)
         val root = rootDir(client)
@@ -159,7 +271,10 @@ object SyncEngine {
             val rel = runCatching {
                 val bytes = MediaDownloader.downloadBytes(u)
                 val name = "${note.id.take(12)}-${i + 1}.${if (u.contains(".png", true)) "png" else "jpg"}"
-                client.postBinary("$root/$src/media/$name", bytes)
+                track.addTotal(bytes.size - (track.plannedMedia[u] ?: 0L)) // 计划偏差修正
+                track.startFile(bytes.size.toLong())
+                client.postBinary("$root/$src/media/$name", bytes) { f -> track.fileFrac(f) }
+                track.finishFile()
                 "$relPrefix/$name"
             }.getOrElse { u }
             imgRefs.add(rel)
@@ -170,41 +285,33 @@ object SyncEngine {
             if (f.exists()) {
                 vidRef = runCatching {
                     val name = "${note.id.take(12)}.mp4"
-                    client.postBinary("$root/$src/media/$name", f.readBytes())
+                    track.addTotal(f.length() - (track.plannedMedia[note.videoUrl ?: p] ?: 0L))
+                    track.startFile(f.length())
+                    client.postBinary("$root/$src/media/$name", f.readBytes()) { fr -> track.fileFrac(fr) }
+                    track.finishFile()
                     "$relPrefix/$name"
                 }.getOrNull()
             }
         }
-        var md = toMarkdown(note, imgRefs, vidRef)
-        val folder = path.substringAfter("/origin content/").substringBeforeLast("/note.md")
-        // AI 总结（用户要求）：note 在特定位置引用独立 "AI summary" 文件（Obsidian wiki link）
-        if (!note.aiSummary.isNullOrBlank()) {
-            md = md.replaceFirst(
-                "# ${note.title}",
-                "# ${note.title}\n\n## AI 总结\n\n[[$src/AI summary/$folder/summary.md]]\n",
-            )
-        }
+        val md = buildUploadMd(note, src, path, imgRefs, vidRef)
         val hash = sha16(md)
         // AI summary 文件（note 之外独立生成；指纹不变跳过）
         if (!note.aiSummary.isNullOrBlank()) {
-            val summaryPath = "$root/$src/AI summary/$folder/summary.md"
-            val summaryMd = buildString {
-                appendLine("---")
-                appendLine("memmos-id: ${note.id}")
-                appendLine("source: ${note.pageUrl}")
-                appendLine("---")
-                appendLine()
-                append(note.aiSummary)
-            }
+            val summaryPath = "$root/$src/AI summary/${path.substringAfter("/origin content/").substringBeforeLast("/note.md")}/summary.md"
+            val summaryMd = buildSummaryMd(note)
             if (remote[summaryPath]?.sha256 != sha16(summaryMd)) {
+                track.startFile(summaryMd.toByteArray().size.toLong())
                 client.postFile(summaryPath, summaryMd)
+                track.finishFile()
             }
         }
         if (remote[path]?.sha256 == hash) return false // 内容一致（含媒体引用）跳过
         // 调试日志：上传失败静默跳过会成为"已是最新"假象，必须可见
         android.util.Log.d("MemmosDbg", "pushStart ${note.title.take(12)} -> $path (img=${imgRefs.size}, vid=${vidRef != null})")
         return runCatching {
+            track.startFile(md.toByteArray().size.toLong())
             client.postFile(path, md)
+            track.finishFile()
             val idx = local.indexOfFirst { it.id == note.id }
             if (idx >= 0) local[idx] = note.copy(originPath = path)
             true
@@ -229,15 +336,21 @@ object SyncEngine {
         }
         if (needUp > 0) {
             var doneU = 0
-            progress.value = SyncProgress("上传到电脑", 0, needUp)
+            val track = UploadTrack()
+            planBytes(client, ups, remote, track)
+            val onChange = {
+                progress.value = SyncProgress("上传到电脑", doneU, needUp, track.done, track.total)
+            }
+            track.onChange = onChange
+            progress.value = SyncProgress("上传到电脑", 0, needUp, 0, track.total)
             for (note in ups) {
                 val p = mdPath(client, note)
                 val needed = remote[p] == null || note.originPath != p
-                if (pushNote(ctx, client, note, local, remote)) up++
+                if (pushNote(ctx, client, note, local, remote, track)) up++
                 else if (needed) skip++
                 if (needed) {
                     doneU++
-                    progress.value = SyncProgress("上传到电脑", doneU, needUp)
+                    onChange()
                 }
             }
         }

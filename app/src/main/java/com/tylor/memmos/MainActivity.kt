@@ -134,6 +134,7 @@ import kotlin.math.roundToInt
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.Locale
 
 /** 主容器：底部三页导航——捕捉 / 剪藏库 / 设置 */
 class MainActivity : ComponentActivity() {
@@ -1389,6 +1390,36 @@ private fun SettingsPage(message: String?, onMessage: (String?) -> Unit, onSync:
                     }
                 }
             }
+            // 同步进度：点「立即同步」后原地替换按钮位置，见字节量+百分比+进度条
+            val syncProg by SyncEngine.progress.collectAsState()
+            val syncMsg by SyncEngine.lastSyncMsg.collectAsState()
+            if (syncProg != null) {
+                val sp = syncProg!!
+                Column(
+                    Modifier.fillMaxWidth().padding(horizontal = 2.dp),
+                    verticalArrangement = Arrangement.spacedBy(5.dp),
+                ) {
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            sp.phase, fontSize = 11.sp, color = TextMid,
+                            modifier = Modifier.weight(1f),
+                        )
+                        val pct = if (sp.totalBytes > 0)
+                            ((sp.doneBytes * 100) / sp.totalBytes).toInt().coerceIn(0, 100)
+                        else (sp.fraction * 100).toInt()
+                        Text(
+                            "已上传 ${fmtBytes(sp.doneBytes)} / ${fmtBytes(sp.totalBytes)}（${pct}%）",
+                            fontSize = 11.sp, color = TextFaint,
+                        )
+                    }
+                    LinearProgressIndicator(
+                        progress = { sp.fraction },
+                        modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(99.dp)),
+                        color = AccentGreen,
+                        trackColor = Color(0x33FFFFFF),
+                    )
+                }
+            }
             Row(
                 Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -1429,38 +1460,10 @@ private fun SettingsPage(message: String?, onMessage: (String?) -> Unit, onSync:
                     Text("取消配对", color = Color(0xFF6EE7B7), fontSize = 13.sp, fontWeight = FontWeight.Bold)
                 }
             }
-        }
-
-        // 同步进度条（用户要求）：上传/下载阶段 + 进度 + 完成态；
-        // 完成后结果消息显示在同一位置（用户要求：同步消息放到进度显示位置）
-        val syncProg by SyncEngine.progress.collectAsState()
-        val syncMsg by SyncEngine.lastSyncMsg.collectAsState()
-        if (syncProg != null || syncMsg != null) {
-            Spacer(Modifier.height(10.dp))
-            Column(
-                Modifier.fillMaxWidth().padding(horizontal = 2.dp),
-                verticalArrangement = Arrangement.spacedBy(5.dp),
-            ) {
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        syncProg?.phase ?: "同步结果", fontSize = 11.sp, color = TextMid,
-                        modifier = Modifier.weight(1f),
-                    )
-                    if (syncProg != null) Text("${syncProg!!.done} / ${syncProg!!.total}", fontSize = 11.sp, color = TextFaint)
-                }
-                if (syncProg != null) {
-                    LinearProgressIndicator(
-                        progress = { syncProg!!.fraction },
-                        modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(99.dp)),
-                        color = AccentGreen,
-                        trackColor = Color(0x33FFFFFF),
-                    )
-                } else {
-                    Text(
-                        syncMsg.orEmpty(),
-                        fontSize = 11.sp, color = TextSoft, lineHeight = 17.sp,
-                    )
-                }
+            // 同步完成消息（紧随按钮下方，与进度同一展示位置）
+            if (syncProg == null && syncMsg != null) {
+                Spacer(Modifier.height(8.dp))
+                Text(syncMsg.orEmpty(), fontSize = 11.sp, color = TextSoft, lineHeight = 17.sp)
             }
         }
 
@@ -1489,6 +1492,12 @@ private fun maskHost(host: String): String =
         if (host.count { it == '.' } >= 2) host.split('.').take(2).joinToString(".") + ".***.***"
         else host
     }
+
+/** 上传字节量人性化：≥1MB 显示 MB（一位小数），否则 KB（整数） */
+private fun fmtBytes(b: Long): String = when {
+    b >= 1_000_000L -> String.format(Locale.US, "%.1f MB", b / 1_000_000.0)
+    else -> String.format(Locale.US, "%.0f KB", b / 1000.0)
+}
 
 /** 内容源标识（手机端分类）：xhs=小红书 bilibili=哔哩哔哩 douyin=抖音；未知兜底小红书 */
 private data class SourceTag(val key: String, val label: String, val fg: Color)

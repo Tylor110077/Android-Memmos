@@ -26,6 +26,19 @@ object MediaDownloader {
         }
     }
 
+    /** HEAD 探测远端文件大小（同步「待传总量」计划用）；失败/无长度返回 null */
+    suspend fun headSize(url: String): Long? = withContext(Dispatchers.IO) {
+        runCatching {
+            client.newCall(
+                Request.Builder().url(url).head()
+                    .header("Referer", "https://www.xiaohongshu.com/")
+                    .build(),
+            ).execute().use { r ->
+                if (!r.isSuccessful) null else r.body?.contentLength()?.takeIf { it > 0 }
+            }
+        }.getOrNull()
+    }
+
     /**
      * 视频流式落盘到 filesDir/media/{id}.mp4（带 Referer 防盗链头）。
      * onProgress 0..1（contentLength 未知时可能不回调），供 UI 进度条/通知用。

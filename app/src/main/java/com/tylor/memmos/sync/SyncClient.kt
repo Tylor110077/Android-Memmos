@@ -4,10 +4,13 @@ import android.content.Context
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import android.util.Base64
+import okhttp3.MediaType
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
+import okio.BufferedSink
 import org.json.JSONObject
 import java.util.concurrent.TimeUnit
 
@@ -84,9 +87,26 @@ class SyncClient(
         call("/api/file", "POST", JSONObject().put("path", path).put("content", content).toString())
     }
 
-    /** 二进制上传（图片/视频等媒体文件，base64 传输） */
-    suspend fun postBinary(path: String, bytes: ByteArray) {
-        call("/api/binary", "POST", JSONObject().put("path", path).put("base64", Base64.encodeToString(bytes, Base64.NO_WRAP)).toString())
+    /** 二进制上传（图片/视频等媒体文件，base64 传输）；
+     *  onProgress 为「本文件」已上传比例 0..1（大文件流式更新，供字节进度展示） */
+    suspend fun postBinary(path: String, bytes: ByteArray, onProgress: ((Float) -> Unit)? = null) {
+        withContext(Dispatchers.IO) {
+            val raw = JSONObject()
+                .put("path", path)
+                .put("base64", Base64.encodeToString(bytes, Base64.NO_WRAP))
+                .toString().toByteArray()
+            val body = if (onProgress != null) ProgressBody(raw, onProgress)
+            else raw.toRequestBody("application/json".toMediaType())
+            val req = Request.Builder()
+                .url(url("/api/binary"))
+                .header("X-Memmos-Token", token)
+                .post(body)
+                .build()
+            client.newCall(req).execute().use { r ->
+                val text = r.body?.string().orEmpty()
+                if (!r.isSuccessful) error(JSONObject(text).optString("error", "HTTP ${r.code}"))
+            }
+        }
     }
 
     /** 二进制下载：返回 base64 字符串（空串=不存在） */
@@ -96,6 +116,24 @@ class SyncClient(
     /** 删除远端文件（Obsidian 插件侧文件；手机为唯一真源时的联删） */
     suspend fun deleteFile(path: String) {
         call("/api/delete", "POST", JSONObject().put("path", path).toString())
+    }
+
+    /** 包装请求体：按 64KB 块写出并回调已写比例（反映 base64 编码后的整体传输） */
+    private class ProgressBody(
+        private val bytes: ByteArray,
+        private val onProgress: (Float) -> Unit,
+    ) : RequestBody() {
+        override fun contentType(): MediaType? = "application/json".toMediaType()
+        override fun contentLength(): Long = bytes.size.toLong()
+        override fun writeTo(sink: BufferedSink) {
+            var off = 0
+            while (off < bytes.size) {
+                val n = minOf(64 * 1024, bytes.size - off)
+                sink.write(bytes, off, n)
+                off += n
+                onProgress(off.toFloat() / bytes.size)
+            }
+        }
     }
 }
 
