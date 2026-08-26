@@ -1269,7 +1269,7 @@ private fun SettingsPage(message: String?, onMessage: (String?) -> Unit, onSync:
                     ) {
                         Column(Modifier.weight(1f)) {
                             Text(dev.name, fontSize = 13.sp, color = TextHi, fontWeight = FontWeight.SemiBold)
-                            Text("${dev.host}:${dev.port}", fontSize = 11.sp, color = TextFaint)
+                            Text("${maskHost(dev.host)}:${dev.port}", fontSize = 11.sp, color = TextFaint)
                         }
                         Text("配对", fontSize = 13.sp, color = Color(0xFF6EE7B7), fontWeight = FontWeight.Bold)
                     }
@@ -1373,8 +1373,19 @@ private fun SettingsPage(message: String?, onMessage: (String?) -> Unit, onSync:
                     Box(Modifier.size(8.dp).background(Success, CircleShape))
                     Spacer(Modifier.width(8.dp))
                     Column(Modifier.weight(1f)) {
-                        Text("已配对：${info.host}:${info.port}", fontSize = 13.sp, color = TextHi, fontWeight = FontWeight.SemiBold)
+                        var showPairAddr by remember { mutableStateOf(false) }
+                        Text(
+                            if (showPairAddr) "已配对：${info.host}:${info.port}"
+                            else "已配对：${maskHost(info.host)}:${info.port}",
+                            fontSize = 13.sp, color = TextHi, fontWeight = FontWeight.SemiBold,
+                        )
                         Text("同步目录：${info.folder.ifBlank { "全库" }}", fontSize = 11.sp, color = TextFaint)
+                    }
+                    // 隐私：默认打码，小眼睛切换查看完整局域网地址
+                    if (showPairAddr) {
+                        IconEyeOff(16.dp, TextFaint, Modifier.clickable { showPairAddr = false })
+                    } else {
+                        IconEye(16.dp, TextFaint, Modifier.clickable { showPairAddr = true })
                     }
                 }
             }
@@ -1471,6 +1482,13 @@ private fun SettingsPage(message: String?, onMessage: (String?) -> Unit, onSync:
 }
 
 /* ═══════════════ 共用组件 ═══════════════ */
+
+/** 局域网地址隐私：显示时把 IP 后三段打码（列表/状态卡不默认明文） */
+private fun maskHost(host: String): String =
+    host.split('.').takeLast(4).take(2).let { segs ->
+        if (host.count { it == '.' } >= 2) host.split('.').take(2).joinToString(".") + ".***.***"
+        else host
+    }
 
 /** 内容源标识（手机端分类）：xhs=小红书 bilibili=哔哩哔哩 douyin=抖音；未知兜底小红书 */
 private data class SourceTag(val key: String, val label: String, val fg: Color)
