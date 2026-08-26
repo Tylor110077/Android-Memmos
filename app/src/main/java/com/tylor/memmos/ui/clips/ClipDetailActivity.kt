@@ -1,16 +1,21 @@
 package com.tylor.memmos.ui.clips
 
+import android.Manifest
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.media.AudioManager
+import android.os.Build
 import android.os.Bundle
 import android.widget.VideoView
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -82,7 +87,7 @@ import com.tylor.memmos.ui.IconFullscreen
 import com.tylor.memmos.ui.IconFullscreenExit
 import com.tylor.memmos.ui.IconPause
 import com.tylor.memmos.ui.IconPlayFilled
-import com.tylor.memmos.net.DotsAi
+import com.tylor.memmos.net.AiSummaryRunner
 import com.tylor.memmos.ui.md.MarkdownView
 import com.tylor.memmos.util.AppPrefs
 import com.tylor.memmos.util.MediaSaver
@@ -215,15 +220,15 @@ private fun DetailContent(initial: ClipNote) {
         AiSummaryCard(
             note = cur,
             ctx = ctx,
-            onSummary = { sum ->
-                cur = cur.copy(aiSummary = sum, aiSummaryTs = System.currentTimeMillis())
+            onSummary = { sum, ts ->
+                cur = cur.copy(aiSummary = sum, aiSummaryTs = ts)
                 scope.launch {
                     withContext(Dispatchers.IO) {
                         runCatching {
                             val st = ClipStore(ctx)
                             val l = st.load()
                             val i = l.indexOfFirst { it.id == cur.id }
-                            if (i >= 0) { l[i] = l[i].copy(aiSummary = sum, aiSummaryTs = System.currentTimeMillis()); st.save(l) }
+                            if (i >= 0) { l[i] = l[i].copy(aiSummary = sum, aiSummaryTs = ts); st.save(l) }
                         }
                     }
                 }
@@ -1025,39 +1030,52 @@ private fun persist(ctx: Context, note: ClipNote) {
     ClipStore(ctx).save(list)
 }
 
-/** AI 总结卡：详情页顶部第一眼可见；已配置 key 时自动生成，可手动重新生成/折叠 */
+/** AI 总结卡：详情页顶部第一眼可见；生成跑在进程级 [AiSummaryRunner]（退出页面不中断），
+ *  完成后写库+通知，卡面对「生成中/完成/失败」实时刷新，重新进入也能看到进度 */
 @Composable
-private fun AiSummaryCard(note: ClipNote, ctx: Context, onSummary: (String) -> Unit) {
-    val scope = rememberCoroutineScope()
+private fun AiSummaryCard(note: ClipNote, ctx: Context, onSummary: (String, Long) -> Unit) {
     var expanded by remember(note.id) { mutableStateOf(note.aiSummary != null) }
-    var generating by remember(note.id) { mutableStateOf(false) }
     var err by remember(note.id) { mutableStateOf<String?>(null) }
     var localSum by remember(note.id) { mutableStateOf(note.aiSummary) }
     val key = AppPrefs.aiApiKey(ctx)
     val mode = AppPrefs.aiSummaryMode(ctx)
-    val brief = AppPrefs.aiSummaryLevel(ctx) == "brief"
     val autoGen = mode == 1 // 时机=点开帖子时：进详情自动生成；0=后台已生成；2=不生成（仅提醒）
 
+    val runningTask by AiSummaryRunner.running.collectAsState()
+    val running = runningTask?.noteId == note.id
+    val outcome by AiSummaryRunner.lastOutcome.collectAsState()
+
+    // 通知权限：首次点「生成」时顺带申请（Android 13+ 通知需运行时授权，失败也不影响写库）
+    val permLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { }
+
     fun gen() {
-        if (generating || key.isBlank()) return
-        generating = true
+        if (running || key.isBlank()) return
         err = null
-        scope.launch {
-            val sum = DotsAi.summarize(key, note, brief)
-            generating = false
-            if (sum != null) {
-                localSum = sum
-                expanded = true
-                onSummary(sum)
-            } else {
-                err = "生成失败：请检查网络 / 设置里的 API Key"
-            }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ctx.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) {
+            permLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
+        AiSummaryRunner.start(ctx, note.id)
     }
 
-    // 自动生成：时机=点开帖子 且已配置 key、还没有摘要时；不生成档位不自动、显示提醒
+    // 自动生成：时机=点开帖子 且已配置 key、还没有摘要时；页面退出后仍在后台跑
     LaunchedEffect(note.id, note.aiSummaryTs, key, mode) {
-        if (mode == 1 && note.aiSummary == null && key.isNotBlank()) gen()
+        if (mode == 1 && note.aiSummary == null && key.isNotBlank()) AiSummaryRunner.start(ctx, note.id)
+    }
+    // 后台完成：写库后此处原地刷新；离开页面再进来则由 note.aiSummary 直接展示
+    LaunchedEffect(outcome) {
+        val o = outcome ?: return@LaunchedEffect
+        if (o.noteId != note.id) return@LaunchedEffect
+        if (o.summary != null) {
+            localSum = o.summary
+            expanded = true
+            onSummary(o.summary, o.at)
+        } else {
+            err = "生成失败：请检查网络 / 设置里的 API Key"
+        }
     }
     val notConfigured = mode == 2
 
@@ -1078,7 +1096,7 @@ private fun AiSummaryCard(note: ClipNote, ctx: Context, onSummary: (String) -> U
             }
             Spacer(Modifier.weight(1f))
             when {
-                generating -> Text("生成中…", fontSize = 11.sp, color = TextFaint)
+                running -> Text("生成中…", fontSize = 11.sp, color = TextFaint)
                 localSum != null -> Text(
                     "重新生成", fontSize = 12.sp, color = Color(0xFF6EE7B7),
                     modifier = Modifier.clickable { gen() },
@@ -1112,7 +1130,7 @@ private fun AiSummaryCard(note: ClipNote, ctx: Context, onSummary: (String) -> U
                 "生成于 ${ClipStore.fmtTime(note.aiSummaryTs)}",
                 fontSize = 10.sp, color = TextFaint,
             )
-        } else if (!generating) {
+        } else if (!running) {
             Spacer(Modifier.height(6.dp))
             Text(
                 err ?: "点击「生成」：AI 将对正文、图片、视频与评论做综合总结",

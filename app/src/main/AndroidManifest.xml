@@ -8,6 +8,8 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <!-- 视频后台保存（foreground dataSync：下载+通知栏进度条） -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <!-- AI 总结完成通知（Android 13+ 运行时授权；首次点「生成」时申请） -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- 剪藏：链接抓取与图片加载 -->
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- 局域网设备发现：接收 UDP 广播响应需要放行多播 -->
