@@ -298,19 +298,6 @@ fun MainTabs(clipCapture: Boolean = false) {
                     Tab.SETTINGS -> SettingsPage(
                         message = message,
                         onMessage = { message = it },
-                        onSync = { c ->
-                            scope.launch {
-                                runCatching { SyncEngine.sync(ctx, c) }
-                                    .onSuccess { r ->
-                                        reload() // 同步完成立即刷新剪藏库（原来要等 ON_RESUME，需退出笔记才更新）
-                                        message = syncDoneMessage(r)
-                                    }
-                                    .onFailure {
-                                        reload() // 部分成功也尽量刷新
-                                        message = "${it.javaClass.simpleName}: ${it.message}"
-                                    }
-                            }
-                        },
                     )
                 }
             }
@@ -795,7 +782,7 @@ private fun LibraryPage(
 /* ═══════════════ 页面 3：设置 ═══════════════ */
 
 @Composable
-private fun SettingsPage(message: String?, onMessage: (String?) -> Unit, onSync: (SyncClient) -> Unit) {
+private fun SettingsPage(message: String?, onMessage: (String?) -> Unit) {
     val ctx = LocalContext.current
     var canDraw by remember { mutableStateOf(Settings.canDrawOverlays(ctx)) }
     // 登录态：声明在生命周期观察器之前（ON_RESUME 会刷新：登录页返回/回前台即时更新）
@@ -1435,7 +1422,8 @@ private fun SettingsPage(message: String?, onMessage: (String?) -> Unit, onSync:
                             syncing = true; onMessage(null)
                             scope.launch {
                                 runCatching { SyncEngine.sync(ctx, c) }
-                                    .onSuccess { r -> onMessage(syncDoneMessage(r)) }
+                                    // 成功结果只在同步按钮下方展示（lastSyncMsg），不进全局横幅——
+                                    // 否则捕捉主页/设置页顶部都会冒出绿色「两端一致」提示
                                     .onFailure { onMessage("${it.javaClass.simpleName}: ${it.message}") }
                                 syncing = false
                             }
@@ -1548,12 +1536,6 @@ private fun AiSegChip(label: String, selected: Boolean, onSelect: () -> Unit) {
             .clickable { onSelect() }
             .padding(horizontal = 14.dp, vertical = 7.dp),
     )
-}
-
-private fun syncDoneMessage(r: SyncEngine.Result): String = when {
-    r.uploaded == 0 && r.deleted == 0 ->
-        "两端一致：手机内容已全部同步到 Obsidian（上传 0 · 失败 ${r.skipped}）"
-    else -> "同步完成：上传 ${r.uploaded} 篇 · 清理已删帖子 ${r.deleted} 个 · 失败 ${r.skipped}"
 }
 
 private fun hasXhsSession(ctx: Context): Boolean {
