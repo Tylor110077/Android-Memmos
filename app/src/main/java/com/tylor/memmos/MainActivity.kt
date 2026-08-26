@@ -1382,9 +1382,14 @@ private fun SettingsPage(message: String?, onMessage: (String?) -> Unit) {
             val syncMsg by SyncEngine.lastSyncMsg.collectAsState()
             if (syncProg != null) {
                 val sp = syncProg!!
+                Spacer(Modifier.height(12.dp))
                 Column(
-                    Modifier.fillMaxWidth().padding(horizontal = 2.dp),
-                    verticalArrangement = Arrangement.spacedBy(5.dp),
+                    Modifier.fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(GlassFill)
+                        .border(1.dp, GlassStrokeSoft, RoundedCornerShape(12.dp))
+                        .padding(horizontal = 12.dp, vertical = 11.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         Text(
