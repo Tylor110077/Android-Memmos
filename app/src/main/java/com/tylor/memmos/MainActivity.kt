@@ -76,6 +76,8 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
@@ -100,6 +102,8 @@ import com.tylor.memmos.ui.fetch.XhsCaptureService
 import com.tylor.memmos.ui.login.XhsLoginActivity
 import com.tylor.memmos.ui.viewer.FileViewerActivity
 import com.tylor.memmos.ui.IconGear
+import com.tylor.memmos.ui.IconEye
+import com.tylor.memmos.ui.IconEyeOff
 import com.tylor.memmos.ui.IconGrid
 import com.tylor.memmos.ui.IconPlayFilled
 import com.tylor.memmos.ui.IconScan
@@ -1006,6 +1010,8 @@ private fun SettingsPage(message: String?, onMessage: (String?) -> Unit, onSync:
         var aiMode by remember { mutableStateOf(AppPrefs.aiSummaryMode(ctx)) }
         var aiLevel by remember { mutableStateOf(AppPrefs.aiSummaryLevel(ctx)) }
         var aiKey by remember { mutableStateOf(AppPrefs.aiApiKey(ctx)) }
+        // 隐私：Key 默认隐藏，小眼睛切换明文
+        var showAiKey by remember { mutableStateOf(false) }
         Column(
             Modifier
                 .fillMaxWidth()
@@ -1059,6 +1065,14 @@ private fun SettingsPage(message: String?, onMessage: (String?) -> Unit, onSync:
                 placeholder = { Text("Dots API Key（ak_ 开头）", fontSize = 12.sp, color = TextFaint) },
                 singleLine = true,
                 textStyle = LocalTextStyle.current.copy(fontSize = 12.sp, color = TextHi),
+                visualTransformation = if (showAiKey) VisualTransformation.None else PasswordVisualTransformation(),
+                trailingIcon = {
+                    if (showAiKey) {
+                        IconEyeOff(18.dp, TextFaint, Modifier.clickable { showAiKey = false })
+                    } else {
+                        IconEye(18.dp, TextFaint, Modifier.clickable { showAiKey = true })
+                    }
+                },
                 colors = TextFieldDefaults.colors(
                     focusedContainerColor = Color(0x0DFFFFFF),
                     unfocusedContainerColor = Color(0x0DFFFFFF),
@@ -1255,6 +1269,7 @@ private fun SettingsPage(message: String?, onMessage: (String?) -> Unit, onSync:
                 modifier = Modifier.clickable { showManual = !showManual }.padding(vertical = 6.dp),
             )
             if (showManual) {
+                var showHost by remember { mutableStateOf(false) }
                 Row(
                     Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -1265,6 +1280,14 @@ private fun SettingsPage(message: String?, onMessage: (String?) -> Unit, onSync:
                         onValueChange = { pairHost = it },
                         placeholder = { Text("电脑IP:端口（默认28422）", fontSize = 11.sp, color = TextFaint) },
                         singleLine = true,
+                        visualTransformation = if (showHost) VisualTransformation.None else PasswordVisualTransformation(),
+                        trailingIcon = {
+                            if (showHost) {
+                                IconEyeOff(16.dp, TextFaint, Modifier.clickable { showHost = false })
+                            } else {
+                                IconEye(16.dp, TextFaint, Modifier.clickable { showHost = true })
+                            }
+                        },
                         colors = TextFieldDefaults.colors(
                             focusedContainerColor = Color(0x0DFFFFFF),
                             unfocusedContainerColor = Color(0x0DFFFFFF),

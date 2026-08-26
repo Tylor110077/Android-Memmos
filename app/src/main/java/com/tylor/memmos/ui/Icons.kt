@@ -126,6 +126,30 @@ fun IconGear(size: Dp, tint: Color, modifier: Modifier = Modifier) = GlyphIcon(s
 
 
 
+/** 眼睛（显示明文）：眼形弧线 + 瞳孔 */
+@Composable
+fun IconEye(size: Dp, tint: Color, modifier: Modifier = Modifier) = GlyphIcon(size, tint, modifier) { st ->
+    drawArc(tint, startAngle = 200f, sweepAngle = 140f, useCenter = false,
+        topLeft = Offset(2.5f, 6.8f), size = Size(19f, 12.4f), style = st)
+    drawArc(tint, startAngle = 20f, sweepAngle = 140f, useCenter = false,
+        topLeft = Offset(2.5f, 6.8f), size = Size(19f, 12.4f), style = st)
+    drawCircle(tint, radius = 2.6f, center = Offset(12f, 13f), style = st)
+}
+
+/** 眼睛划掉（隐藏明文） */
+@Composable
+fun IconEyeOff(size: Dp, tint: Color, modifier: Modifier = Modifier) = GlyphIcon(size, tint, modifier) { st ->
+    drawArc(tint, startAngle = 200f, sweepAngle = 140f, useCenter = false,
+        topLeft = Offset(2.5f, 6.8f), size = Size(19f, 12.4f), style = st)
+    drawArc(tint, startAngle = 20f, sweepAngle = 140f, useCenter = false,
+        topLeft = Offset(2.5f, 6.8f), size = Size(19f, 12.4f), style = st)
+    drawCircle(tint, radius = 2.6f, center = Offset(12f, 13f), style = st)
+    line(4f, 4.5f, 20f, 21.5f, st, tint)
+}
+
+
+
+/** 捕捉/扫描（岛屿底栏「捕捉」项）：圆形靶心 */
 @Composable
 fun IconScan(size: Dp, tint: Color, modifier: Modifier = Modifier) = GlyphIcon(size, tint, modifier) { st ->
     drawCircle(tint, radius = 6.6f, center = Offset(12f, 12f), style = st)
