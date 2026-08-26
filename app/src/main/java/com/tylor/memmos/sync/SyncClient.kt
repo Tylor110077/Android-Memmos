@@ -80,8 +80,10 @@ class SyncClient(
     }
 
 
-    /** 原始响应（md 走 content 字段，二进制走 base64 字段，由调用方区分） */
-    suspend fun getFileRaw(path: String): String = call("/api/file?path=$path")
+    /** md 内容读取：服务端返回 {path, content}，取 content（联删判定 memmos-id 需文本本身，
+     *  不能再拿 JSON 字符串做行首正则——换行在 JSON 里是 \n 转义，^ 永远匹配不到） */
+    suspend fun getFileRaw(path: String): String =
+        JSONObject(call("/api/file?path=$path")).optString("content")
 
     suspend fun postFile(path: String, content: String) {
         call("/api/file", "POST", JSONObject().put("path", path).put("content", content).toString())
