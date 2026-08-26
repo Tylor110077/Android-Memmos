@@ -32,10 +32,10 @@ object SyncEngine {
 
     private fun rootDir(client: SyncClient): String = client.rootFolder.ifBlank { "Memmos graph" }
 
-    /** 内容源 → Obsidian 大文件夹（按源隔离；bilibili 预留 → 后续抓取自动归入）
-     * 当前来源：xhs=小红书；未知兜底「小红书」 */
+    /** 内容源 → Obsidian 大文件夹（英文名；按源隔离，后续源自动归入）
+     * xhs=xiaohongshu；bilibili=bilibili；未知兜底 xiaohongshu */
     private fun sourceFolder(note: ClipNote): String =
-        if (note.origin == "bilibili") "哔哩哔哩" else "小红书"
+        if (note.origin == "bilibili") "bilibili" else "xiaohongshu"
 
     /** 手机剪藏 → Obsidian md 路径（用户要求：{根}/{源}/origin content/{标题}/note.md）：
      * {根}/{源}/media/ ← 该源全部图片/视频；{根}/{源}/AI summary/{标题}/总结.md
@@ -181,13 +181,13 @@ object SyncEngine {
         if (!note.aiSummary.isNullOrBlank()) {
             md = md.replaceFirst(
                 "# ${note.title}",
-                "# ${note.title}\n\n## AI 总结\n\n[[$src/AI summary/$folder/总结.md]]\n",
+                "# ${note.title}\n\n## AI 总结\n\n[[$src/AI summary/$folder/summary.md]]\n",
             )
         }
         val hash = sha16(md)
         // AI summary 文件（note 之外独立生成；指纹不变跳过）
         if (!note.aiSummary.isNullOrBlank()) {
-            val summaryPath = "$root/$src/AI summary/$folder/总结.md"
+            val summaryPath = "$root/$src/AI summary/$folder/summary.md"
             val summaryMd = buildString {
                 appendLine("---")
                 appendLine("memmos-id: ${note.id}")
