@@ -378,11 +378,17 @@ object SyncEngine {
             if (postId in myPostIds) continue
             val prefix = "${postId.take(12)}"
             val srcDir = path.substringBefore("/origin content/") // {根}/{源}
+            val folder = path.substringAfter("/origin content/").substringBeforeLast("/note.md")
             runCatching { client.deleteFile(path) }
                 .onFailure { android.util.Log.d("MemmosDbg", "remote delete md fail $path: ${it.message}") }
             remote.keys.filter { it.startsWith("$srcDir/media/$prefix") }.forEach { a ->
                 runCatching { client.deleteFile(a) }
                     .onFailure { android.util.Log.d("MemmosDbg", "remote delete media fail $a: ${it.message}") }
+            }
+            // AI 总结同级文件夹也级联删除（note.md 引用了它，帖子没了总结也没意义）
+            remote.keys.filter { it.startsWith("$srcDir/AI summary/$folder/") }.forEach { s ->
+                runCatching { client.deleteFile(s) }
+                    .onFailure { android.util.Log.d("MemmosDbg", "remote delete summary fail $s: ${it.message}") }
             }
             android.util.Log.d("MemmosDbg", "remote delete post: $path (id=$postId) attachments removed")
             deletedRemote++
