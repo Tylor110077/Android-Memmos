@@ -15,7 +15,8 @@ import java.util.concurrent.TimeUnit
  * Dots AI（dots3-note-prev）接入：OpenAI 兼容 /v1/chat/completions，
  * 认证用 `api-key` 请求头（文档明确：Key 不得进入前端代码/日志/公开仓库——只存本机偏好）。
  * 多模态：content 内容数组可混合 text / image_url / video_url（模型侧访问公网 URL，
- * 小红书 CDN 直链可直接食用）。非流式一次返回，控制 max_tokens 与关闭深度思考以提速。
+ * 小红书图片 CDN 直链可食用；视频 CDN（sns-video-v4）实测 Dots 拉不到（会整单超时失效），
+ * 视频笔记降级为 封面+正文+图片+评论 总结并在文本中注明。非流式一次返回，关闭深度思考以提速。
  */
 object DotsAi {
 
@@ -63,17 +64,12 @@ object DotsAi {
                     .put("image_url", JSONObject().put("url", u).put("detail", "medium")),
             )
         }
-        if (note.localVideoPath != null && note.videoUrl != null) {
-            blocks.put(
-                JSONObject().put("type", "video_url")
-                    .put("video_url", JSONObject().put("url", note.videoUrl)),
-            )
-        } else if (note.videoUrl != null) {
-            blocks.put(
-                JSONObject().put("type", "video_url")
-                    .put("video_url", JSONObject().put("url", note.videoUrl)),
-            )
-        }
+        // 视频：实测 Dots 无法访问 xhscdn 的视频域名（sns-video-v4 对 Dots 出口被封锁/拉取卡死），
+        // 传 video_url 会让整个请求超时失败（用户反馈「生成失败」根因）。
+        // 降级：不传视频 URL（会卡死），改为文本注明；音频同视频一并处理（不传 URL 以免同样卡死）。
+        text(if (note.videoUrl != null)
+            "（本笔记是视频笔记；视频流无法自动获取，分析与总结基于封面、正文、图片与评论）"
+        else "")
         val commentsText = buildString {
             note.comments.forEach { c ->
                 append("· ${c.nickname}：${c.content}")
