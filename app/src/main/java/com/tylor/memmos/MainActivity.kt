@@ -110,7 +110,13 @@ import com.tylor.memmos.ui.IconScan
 import com.tylor.memmos.ui.components.AmbientBackdrop
 import com.tylor.memmos.ui.components.VisionCard
 import com.tylor.memmos.ui.components.VisionRowCard
+import com.tylor.memmos.ui.theme.ChipStroke
+import com.tylor.memmos.ui.theme.AccentGreenSoft
 import com.tylor.memmos.ui.theme.AccentBrush
+import com.tylor.memmos.ui.theme.ThemeAccent
+import com.tylor.memmos.ui.theme.loadThemeAccent
+import com.tylor.memmos.ui.theme.setThemeAccent
+import com.tylor.memmos.ui.theme.themeAccent
 import com.tylor.memmos.ui.theme.BtnPrimaryBg
 import com.tylor.memmos.ui.theme.BtnPrimaryText
 import com.tylor.memmos.ui.theme.AccentGreen
@@ -141,6 +147,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        loadThemeAccent(this) // 主题色（绿/Obsidian 紫）先于首帧读取
         // 悬浮窗按钮引导：本 Activity 在前台才能合法读剪贴板（Android 10+ 后台读取被拦截）
         val clipCapture = intent?.getBooleanExtra("clipCapture", false) == true
         setContent {
@@ -501,7 +508,7 @@ private fun CapturePage(
         message?.let {
             Text(
                 it, fontSize = 11.5.sp,
-                color = if (it.startsWith("已收进")) Color(0xFF8FD4AB) else Color(0xFF6EE7B7),
+                color = if (it.startsWith("已收进")) Success else AccentGreenSoft,
                 modifier = Modifier.padding(top = 8.dp).fillMaxWidth(),
             )
         }
@@ -586,7 +593,7 @@ private fun LibraryPage(
                 Spacer(Modifier.weight(1f))
                 Text(
                     if (selected.size == filtered.size) "取消全选" else "全选",
-                    fontSize = 13.sp, color = Color(0xFF6EE7B7), fontWeight = FontWeight.Bold,
+                    fontSize = 13.sp, color = AccentGreenSoft, fontWeight = FontWeight.Bold,
                     modifier = Modifier.clickable {
                         selected = if (selected.size == filtered.size) mutableStateOf(setOf<String>()).value
                         else filtered.map { it.id }.toSet()
@@ -715,7 +722,7 @@ private fun LibraryPage(
                 color = TextHi, fontSize = 13.sp, fontWeight = FontWeight.Bold,
                 modifier = Modifier.weight(1f),
             )
-            Text("⋯", color = Color(0xFF6EE7B7), fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            Text("⋯", color = AccentGreenSoft, fontSize = 18.sp, fontWeight = FontWeight.Bold)
         }
     }
 
@@ -736,7 +743,7 @@ private fun LibraryPage(
         ) {
             Text(
                 "删除所选 ${selected.size} 篇",
-                color = Color(0xFF6EE7B7), fontSize = 15.sp, fontWeight = FontWeight.Bold,
+                color = AccentGreenSoft, fontSize = 15.sp, fontWeight = FontWeight.Bold,
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable {
@@ -842,7 +849,7 @@ private fun SettingsPage(message: String?, onMessage: (String?) -> Unit) {
         message?.let {
             Text(
                 it, fontSize = 11.sp, lineHeight = 16.sp,
-                color = if (it.startsWith("配对成功") || it.startsWith("同步完成")) Color(0xFF8FD4AB) else Color(0xFF6EE7B7),
+                color = if (it.startsWith("配对成功") || it.startsWith("同步完成")) Success else AccentGreenSoft,
                 modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
             )
         }
@@ -1092,7 +1099,7 @@ private fun SettingsPage(message: String?, onMessage: (String?) -> Unit) {
                         unfocusedContainerColor = Color(0x0FFFFFFF),
                         focusedIndicatorColor = Color.Transparent,
                         unfocusedIndicatorColor = Color.Transparent,
-                        cursorColor = Color(0xFF6EE7B7),
+                        cursorColor = AccentGreenSoft,
                     ),
                     shape = RoundedCornerShape(12.dp),
                 )
@@ -1140,6 +1147,31 @@ private fun SettingsPage(message: String?, onMessage: (String?) -> Unit) {
                 modifier = Modifier.padding(top = 6.dp),
             )
         }
+        Spacer(Modifier.height(22.dp))
+
+        // 主题色（用户要求）：整个主界面跟随（按钮/高亮/Chip/占位封面），紫色为 Obsidian 紫
+        SectionLabel("主题色")
+        Spacer(Modifier.height(8.dp))
+        Row(
+            Modifier
+                .clip(RoundedCornerShape(999.dp))
+                .background(IslandFill)
+                .border(1.dp, Color(0x26FFFFFF), RoundedCornerShape(999.dp))
+                .padding(4.dp),
+        ) {
+            AiSegChip("绿", themeAccent.value == ThemeAccent.GREEN) {
+                setThemeAccent(ctx, ThemeAccent.GREEN)
+            }
+            Spacer(Modifier.width(4.dp))
+            AiSegChip("紫", themeAccent.value == ThemeAccent.PURPLE) {
+                setThemeAccent(ctx, ThemeAccent.PURPLE)
+            }
+        }
+        Text(
+            "绿=品牌绿；紫=Obsidian 紫；悬浮窗配色在浮条设置里单独调整",
+            fontSize = 10.sp, color = TextFaint, lineHeight = 15.sp,
+            modifier = Modifier.padding(top = 6.dp),
+        )
         Spacer(Modifier.height(22.dp))
 
         SectionLabel("悬浮窗")
@@ -1201,7 +1233,7 @@ private fun SettingsPage(message: String?, onMessage: (String?) -> Unit) {
                     else -> "停止悬浮窗"
                 },
                 fontSize = 13.sp, fontWeight = FontWeight.Bold,
-                color = if (canDraw && running) Color(0xFF6EE7B7) else BtnPrimaryText,
+                color = if (canDraw && running) AccentGreenSoft else BtnPrimaryText,
                 modifier = Modifier
                     .clip(RoundedCornerShape(999.dp))
                     .background(SolidColor(if (canDraw && running) Color(0x14FF2E4D) else BtnPrimaryBg))
@@ -1236,7 +1268,7 @@ private fun SettingsPage(message: String?, onMessage: (String?) -> Unit) {
             }
             Text(
                 if (loggedIn) "重新登录" else "登录",
-                fontSize = 13.sp, color = Color(0xFF6EE7B7), fontWeight = FontWeight.Bold,
+                fontSize = 13.sp, color = AccentGreenSoft, fontWeight = FontWeight.Bold,
                 modifier = Modifier.clickable {
                     ctx.startActivity(Intent(ctx, XhsLoginActivity::class.java))
                 },
@@ -1300,7 +1332,7 @@ private fun SettingsPage(message: String?, onMessage: (String?) -> Unit) {
                             Text(dev.name, fontSize = 13.sp, color = TextHi, fontWeight = FontWeight.SemiBold)
                             Text("${maskHost(dev.host)}:${dev.port}", fontSize = 11.sp, color = TextFaint)
                         }
-                        Text("配对", fontSize = 13.sp, color = Color(0xFF6EE7B7), fontWeight = FontWeight.Bold)
+                        Text("配对", fontSize = 13.sp, color = AccentGreenSoft, fontWeight = FontWeight.Bold)
                     }
                 }
             } else if (!scanning) {
@@ -1315,7 +1347,7 @@ private fun SettingsPage(message: String?, onMessage: (String?) -> Unit) {
             var showManual by remember { mutableStateOf(false) }
             Text(
                 if (showManual) "收起手动输入" else "手动输入地址",
-                fontSize = 11.5.sp, color = Color(0xFF6EE7B7),
+                fontSize = 11.5.sp, color = AccentGreenSoft,
                 modifier = Modifier.clickable { showManual = !showManual }.padding(vertical = 6.dp),
             )
             if (showManual) {
@@ -1483,7 +1515,7 @@ private fun SettingsPage(message: String?, onMessage: (String?) -> Unit) {
                         .width(110.dp)
                         .height(50.dp)
                         .clip(RoundedCornerShape(12.dp))
-                        .border(1.dp, Color(0x6610B981), RoundedCornerShape(12.dp))
+                        .border(1.dp, ChipStroke, RoundedCornerShape(12.dp))
                         .clickable {
                             SyncPrefs.clear(ctx)
                             paired = false
@@ -1491,7 +1523,7 @@ private fun SettingsPage(message: String?, onMessage: (String?) -> Unit) {
                         },
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text("取消配对", color = Color(0xFF6EE7B7), fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    Text("取消配对", color = AccentGreenSoft, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                 }
             }
             // 同步完成消息（紧随按钮下方，与进度同一展示位置）
@@ -1542,10 +1574,11 @@ private fun sourceKey(origin: String): String = when (origin) {
     else -> "xiaohongshu"
 }
 
+@Composable
 private fun sourceTag(origin: String): SourceTag = when (sourceKey(origin)) {
     "bilibili" -> SourceTag("bilibili", "哔哩哔哩", Color(0xFF9EC5FF))
     "douyin" -> SourceTag("douyin", "抖音", Color(0xFF7FD8D0))
-    else -> SourceTag("xiaohongshu", "小红书", Color(0xFFA7F3D0))
+    else -> SourceTag("xiaohongshu", "小红书", ChipText)
 }
 
 /** 源小标：玻璃小胶囊 + 源名字（列表/面板/详情共用样式） */
@@ -1720,7 +1753,7 @@ private fun ClipRow(
                 } else {
                     Box(
                         Modifier.fillMaxSize().background(
-                            Brush.linearGradient(listOf(Color(0x1F10B981), Color(0x1F34D399))),
+                            Brush.linearGradient(listOf(themeAccent.value.soft.copy(alpha = 0.12f), themeAccent.value.success.copy(alpha = 0.12f))),
                         ),
                         contentAlignment = Alignment.Center,
                     ) { Text(if (note.origin == "vault") "M" else "文", color = ChipText, fontSize = 15.sp) }
@@ -1802,7 +1835,7 @@ private fun SyncFileRow(f: java.io.File, onClick: () -> Unit) {
         ) {
             Box(
                 Modifier.size(38.dp).background(
-                    Brush.linearGradient(listOf(Color(0x1F10B981), Color(0x1F34D399))),
+                    Brush.linearGradient(listOf(themeAccent.value.soft.copy(alpha = 0.12f), themeAccent.value.success.copy(alpha = 0.12f))),
                     RoundedCornerShape(10.dp),
                 ),
                 contentAlignment = Alignment.Center,

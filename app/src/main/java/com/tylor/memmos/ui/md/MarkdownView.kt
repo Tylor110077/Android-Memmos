@@ -37,6 +37,8 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.tylor.memmos.ui.theme.AccentOrange
 import com.tylor.memmos.ui.theme.AccentGreenSoft
+import com.tylor.memmos.ui.theme.ThemeAccent
+import com.tylor.memmos.ui.theme.themeAccent
 import com.tylor.memmos.ui.theme.AccentRed
 import com.tylor.memmos.ui.theme.ChipText
 import com.tylor.memmos.ui.theme.GlassStrokeSoft
@@ -208,7 +210,7 @@ private data class LinkSpan(val start: Int, val end: Int, val url: String? = nul
 
 private data class InlineResult(val text: AnnotatedString, val links: List<LinkSpan>)
 
-private fun renderInline(raw: String): InlineResult {
+private fun renderInline(raw: String, accent: ThemeAccent = themeAccent.value): InlineResult {
     val sb = AnnotatedString.Builder()
     val links = mutableListOf<LinkSpan>()
     var last = 0
@@ -220,7 +222,7 @@ private fun renderInline(raw: String): InlineResult {
         // 组 2（代码）比较特殊，其余按前缀判断；顺序与 INLINE 优先级一致
         if (m.groups[2] != null) {
             sb.append(tok.trim('`'))
-            sb.addStyle(SpanStyle(fontFamily = FontFamily.Monospace, color = AccentGreenSoft, background = Color(0x1AFFFFFF)), start, sb.length)
+            sb.addStyle(SpanStyle(fontFamily = FontFamily.Monospace, color = accent.soft, background = Color(0x1AFFFFFF)), start, sb.length)
         } else when {
             tok.startsWith("![") -> { // 行内图片（独立一行时已在块级放大渲染）
                 val alt = Regex("^!\\[([^]]*)]").find(tok)?.groupValues?.get(1).orEmpty().ifBlank { "图片" }
@@ -258,24 +260,24 @@ private fun renderInline(raw: String): InlineResult {
             }
             tok.startsWith("$") -> {
                 sb.append(tok.removeSurrounding("$"))
-                sb.addStyle(SpanStyle(fontFamily = FontFamily.Monospace, color = AccentGreenSoft), start, sb.length)
+                sb.addStyle(SpanStyle(fontFamily = FontFamily.Monospace, color = accent.soft), start, sb.length)
             }
             tok.startsWith("[") -> { // [text](url)
                 val inner = Regex("^\\[([^]]+)]\\(([^)]+)\\)$").find(tok)
                 val label = inner?.groupValues?.get(1) ?: tok
                 val url = inner?.groupValues?.get(2).orEmpty()
                 sb.append(label)
-                sb.addStyle(SpanStyle(color = AccentGreenSoft, textDecoration = TextDecoration.Underline), start, sb.length)
+                sb.addStyle(SpanStyle(color = accent.soft, textDecoration = TextDecoration.Underline), start, sb.length)
                 links += LinkSpan(start, sb.length, url = url)
             }
             tok.startsWith("http") -> { // 自动 URL
                 sb.append(tok)
-                sb.addStyle(SpanStyle(color = AccentGreenSoft, textDecoration = TextDecoration.Underline), start, sb.length)
+                sb.addStyle(SpanStyle(color = accent.soft, textDecoration = TextDecoration.Underline), start, sb.length)
                 links += LinkSpan(start, sb.length, url = tok)
             }
             else -> { // #标签
                 sb.append(tok)
-                sb.addStyle(SpanStyle(color = ChipText, fontWeight = FontWeight.Bold), start, sb.length)
+                sb.addStyle(SpanStyle(color = accent.chipText, fontWeight = FontWeight.Bold), start, sb.length)
             }
         }
     }
@@ -340,7 +342,8 @@ private fun BlockView(block: MdParse.Block, originPath: String?, vaultRoot: File
 /** 带行内样式 + 点击跳转的文本（链接开浏览器、[[双链]] 开本地 vault 文件） */
 @Composable
 private fun InlineText(raw: String, style: TextStyle, modifier: Modifier = Modifier, onWiki: (String) -> Unit = {}) {
-    val result = remember(raw) { renderInline(raw) }
+    val accentNow = themeAccent.value
+    val result = remember(raw, accentNow) { renderInline(raw, accentNow) }
     var layout by remember { mutableStateOf<TextLayoutResult?>(null) }
     val uriHandler = LocalUriHandler.current
     Text(

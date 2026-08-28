@@ -60,6 +60,15 @@ object AppPrefs {
             .putString("aiCustomPrompt", v).apply()
     }
 
+    /** 主题强调色：green=品牌绿（默认） purple=Obsidian 紫；全 App 主界面跟随 */
+    fun themeColor(ctx: Context): String =
+        ctx.getSharedPreferences(FILE, Context.MODE_PRIVATE).getString("themeColor", "green").orEmpty()
+
+    fun setThemeColor(ctx: Context, v: String) {
+        ctx.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit()
+            .putString("themeColor", if (v == "purple") "purple" else "green").apply()
+    }
+
     /** Dots API Key（仅存本机；切勿写入日志/仓库） */
     fun aiApiKey(ctx: Context): String =
         ctx.getSharedPreferences(FILE, Context.MODE_PRIVATE).getString("aiApiKey", "").orEmpty()

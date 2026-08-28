@@ -1,5 +1,7 @@
 package com.tylor.memmos.ui.viewer
 
+import com.tylor.memmos.ui.theme.AccentGreenSoft
+import com.tylor.memmos.ui.theme.loadThemeAccent
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.pdf.PdfRenderer
@@ -64,6 +66,7 @@ class FileViewerActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        loadThemeAccent(this)
         enableEdgeToEdge()
 
         val path = intent.getStringExtra("path") ?: return finish()
@@ -102,7 +105,7 @@ private fun ViewerScreen(file: File, displayPath: String) {
                 Text(file.name, color = TextHi, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1)
                 Text(displayPath.substringBeforeLast('/'), color = TextFaint, fontSize = 10.sp)
             }
-            Text("外部打开", color = Color(0xFF6EE7B7), fontSize = 12.sp,
+            Text("外部打开", color = AccentGreenSoft, fontSize = 12.sp,
                 modifier = Modifier
                     .clip(RoundedCornerShape(8.dp))
                     .clickable { openExternal(file, ctx) }

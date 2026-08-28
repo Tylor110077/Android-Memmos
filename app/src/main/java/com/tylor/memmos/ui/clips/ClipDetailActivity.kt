@@ -1,5 +1,11 @@
 package com.tylor.memmos.ui.clips
 
+import com.tylor.memmos.ui.theme.ChipBg
+import com.tylor.memmos.ui.theme.ChipStroke
+import com.tylor.memmos.ui.theme.ChipText
+import com.tylor.memmos.ui.theme.Success
+import com.tylor.memmos.ui.theme.AccentGreenSoft
+import com.tylor.memmos.ui.theme.loadThemeAccent
 import android.Manifest
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -114,6 +120,7 @@ import kotlinx.coroutines.withContext
 class ClipDetailActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        loadThemeAccent(this)
         enableEdgeToEdge()
         val id = intent.getStringExtra("id") ?: return finish()
         val note = ClipStore(this).load().firstOrNull { it.id == id } ?: return finish()
@@ -290,7 +297,7 @@ private fun DetailContent(initial: ClipNote) {
                         }
                     }
                 }
-                imgMsg?.let { Text(it, fontSize = 11.sp, color = Color(0xFF8FD4AB), modifier = Modifier.padding(bottom = 6.dp)) }
+                imgMsg?.let { Text(it, fontSize = 11.sp, color = Success, modifier = Modifier.padding(bottom = 6.dp)) }
             }
             cur.imageUrls.size == 1 -> {
                 SingleImage(cur.imageUrls[0]) { viewerPage = 0 }
@@ -443,7 +450,7 @@ private fun VideoCoverBlock(cover: String?, progress: Float?, onDownload: () -> 
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth()
                     .padding(horizontal = 12.dp, vertical = 8.dp),
-                color = Color(0xFF6EE7B7),
+                color = AccentGreenSoft,
                 trackColor = Color(0x33FFFFFF),
             )
         }
@@ -791,7 +798,7 @@ private fun PlayerControlBar(
             contentAlignment = Alignment.CenterStart,
         ) {
             Box(Modifier.fillMaxWidth().height(3.dp).background(Color(0x55FFFFFF)))
-            Box(Modifier.fillMaxWidth(frac).height(3.dp).background(Color(0xFF6EE7B7)))
+            Box(Modifier.fillMaxWidth(frac).height(3.dp).background(AccentGreenSoft))
         }
         Row(
             Modifier.fillMaxWidth(),
@@ -995,7 +1002,7 @@ private fun ImageViewer(ctx: Context, urls: List<String>, initialPage: Int, onDi
                     )
                 }
                 Spacer(Modifier.height(6.dp))
-                viewerMsg?.let { Text(it, color = Color(0xFF8FD4AB), fontSize = 11.5.sp) }
+                viewerMsg?.let { Text(it, color = Success, fontSize = 11.5.sp) }
             }
             // 页码置顶（用户反馈：原在底部会与保存按钮堆叠且被导航条遮挡）
             Text(
@@ -1101,17 +1108,17 @@ private fun AiSummaryCard(note: ClipNote, ctx: Context, onSummary: (String, Long
                     CircularProgressIndicator(
                         modifier = Modifier.size(18.dp),
                         strokeWidth = 2.2.dp,
-                        color = Color(0xFF6EE7B7),
+                        color = AccentGreenSoft,
                     )
                     Spacer(Modifier.width(7.dp))
                     Text("生成中…", fontSize = 11.sp, color = TextFaint)
                 }
                 localSum != null -> Text(
-                    "重新生成", fontSize = 12.sp, color = Color(0xFF6EE7B7),
+                    "重新生成", fontSize = 12.sp, color = AccentGreenSoft,
                     modifier = Modifier.clickable { gen() },
                 )
                 else -> Text(
-                    "生成", fontSize = 12.sp, color = Color(0xFF6EE7B7),
+                    "生成", fontSize = 12.sp, color = AccentGreenSoft,
                     modifier = Modifier.clickable { gen() },
                 )
             }
@@ -1209,21 +1216,22 @@ private fun MdInlineView(md: String, originPath: String?) {
 
 private data class DetailSourceTag(val label: String, val fg: Color)
 
+@Composable
 private fun sourceTag(origin: String): DetailSourceTag = when (origin) {
     "bilibili" -> DetailSourceTag("哔哩哔哩", Color(0xFF9EC5FF))
     "douyin" -> DetailSourceTag("抖音", Color(0xFF7FD8D0))
-    else -> DetailSourceTag("小红书", Color(0xFFA7F3D0))
+    else -> DetailSourceTag("小红书", ChipText)
 }
 
 @Composable
-private fun TagPill(text: String, fg: Color = Color(0xFFA7F3D0)) {
+private fun TagPill(text: String, fg: Color = ChipText) {
     Text(
         text,
         fontSize = 11.sp,
         color = fg,
         modifier = Modifier
-            .background(Color(0x2E10B981), RoundedCornerShape(999.dp))
-            .border(1.dp, Color(0x6610B981), RoundedCornerShape(999.dp))
+            .background(ChipBg, RoundedCornerShape(999.dp))
+            .border(1.dp, ChipStroke, RoundedCornerShape(999.dp))
             .padding(horizontal = 10.dp, vertical = 4.dp),
     )
 }
@@ -1240,7 +1248,7 @@ private fun ActionRow(label: String, action: String, onClick: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(label, fontSize = 13.sp, color = TextMid, modifier = Modifier.weight(1f))
-        Text(action, fontSize = 13.sp, color = Color(0xFF6EE7B7), fontWeight = FontWeight.Bold,
+        Text(action, fontSize = 13.sp, color = AccentGreenSoft, fontWeight = FontWeight.Bold,
             modifier = Modifier.clickable(onClick = onClick))
     }
 }

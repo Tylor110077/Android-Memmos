@@ -25,6 +25,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.tylor.memmos.ui.GlyphIcon
+import com.tylor.memmos.ui.theme.ChipBg
 import com.tylor.memmos.ui.theme.AccentGreenSoft
 import com.tylor.memmos.ui.theme.GlassFill
 import com.tylor.memmos.ui.theme.GlassStrokeSoft
@@ -81,7 +82,7 @@ fun PillAction(text: String, onClick: () -> Unit) {
         fontSize = 12.sp, color = AccentGreenSoft, fontWeight = FontWeight.SemiBold,
         modifier = Modifier
             .clip(Shapes.Pill)
-            .background(Color(0x2E10B981))
+            .background(ChipBg)
             .clickable(onClick = onClick)
             .padding(horizontal = 14.dp, vertical = 7.dp),
     )

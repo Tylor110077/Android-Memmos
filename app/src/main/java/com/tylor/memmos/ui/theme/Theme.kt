@@ -3,6 +3,8 @@ package com.tylor.memmos.ui.theme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -19,14 +21,60 @@ val AccentRed = Color(0xFFFF2E4D) // 语义红：删除/失败/危险
 val AccentOrange = Color(0xFFFF9E5C) // 语义橙：仅警示（callout warning）
 val AccentAmber = AccentOrange
 
-/* 品牌色（官方源：Vechooool vision-engine-scan-console design.md）：
- * Accent #10B981 荧光绿；画布 #000000；Surface #FFFFFF；Secondary #EF4444=语义红。
- * 一个品牌色 + 三语义色（绿系成功/红危险/橙警示） */
-val AccentGreen = Color(0xFF10B981)
-val AccentGreenSoft = Color(0xFF6EE7B7) // 绿的浅调：链接/高亮文字
+// ── 主题强调色（用户 2026-08-28：主题色可选，新增 Obsidian 紫，整个主界面跟随）──
+// 品牌色族令牌（AccentGreen/AccentBrush/Success/Chip 系列/CoverGradients）不再是指针常量，
+// 而是读 themeAccent 状态的 @Composable getter（MaterialTheme.colors 同款模式），
+// 换主题=换 themeAccent 状态，全 App 立即换装。语义红/橙不随主题。
+enum class ThemeAccent(val label: String) {
+    GREEN("绿"), PURPLE("紫");
 
-/** 品牌强调：同一绿的轻微双调渐变（视觉立体但仍是单色系） */
-val AccentBrush = Brush.linearGradient(listOf(Color(0xFF10B981), Color(0xFF34D399)))
+    val primary: Color get() = if (this == GREEN) Color(0xFF10B981) else Color(0xFF7C3AED)
+    val soft: Color get() = if (this == GREEN) Color(0xFF6EE7B7) else Color(0xFFA78BFA) // 链接/高亮浅调
+    val success: Color get() = if (this == GREEN) Color(0xFF34D399) else Color(0xFFC4B5FD)
+    val chipBg: Color get() = if (this == GREEN) Color(0x2E10B981) else Color(0x2E7C3AED)
+    val chipStroke: Color get() = if (this == GREEN) Color(0x6610B981) else Color(0x667C3AED)
+    val chipText: Color get() = if (this == GREEN) Color(0xFFA7F3D0) else Color(0xFFDDD6FE)
+    val brush: List<Color> get() = if (this == GREEN) listOf(Color(0xFF10B981), Color(0xFF34D399))
+    else listOf(Color(0xFF7C3AED), Color(0xFFA78BFA))
+    // 占位封面：品牌色系深浅变体
+    val covers: List<List<Color>> get() = if (this == GREEN) listOf(
+        listOf(Color(0xFF062A20), Color(0xFF0E5C43)),
+        listOf(Color(0xFF051F18), Color(0xFF0B4634)),
+        listOf(Color(0xFF073226), Color(0xFF126A4C)),
+        listOf(Color(0xFF04160F), Color(0xFF093526)),
+        listOf(Color(0xFF06271D), Color(0xFF0F5840)),
+        listOf(Color(0xFF051F18), Color(0xFF0D4A37)),
+    ) else listOf(
+        listOf(Color(0xFF1A1030), Color(0xFF46297F)),
+        listOf(Color(0xFF140C24), Color(0xFF351F61)),
+        listOf(Color(0xFF1E1338), Color(0xFF54339A)),
+        listOf(Color(0xFF0F091C), Color(0xFF2A1852)),
+        listOf(Color(0xFF171029), Color(0xFF3F2774)),
+        listOf(Color(0xFF140C24), Color(0xFF372166)),
+    )
+}
+
+/** 当前主题（进程级状态）：设置页切换即改。令牌 getter 直接读这个 State——
+ *  任何 Compose 组合（主界面/详情/悬浮层）读到它都会在其变化时自动重组合 */
+val themeAccent: MutableState<ThemeAccent> = mutableStateOf(ThemeAccent.GREEN)
+
+/** 存取（AppPrefs 里只存字符串，这里做枚举桥）；各 Activity onCreate 时 load 一次 */
+fun loadThemeAccent(ctx: android.content.Context) {
+    themeAccent.value =
+        if (com.tylor.memmos.util.AppPrefs.themeColor(ctx) == "purple") ThemeAccent.PURPLE else ThemeAccent.GREEN
+}
+
+fun setThemeAccent(ctx: android.content.Context, a: ThemeAccent) {
+    com.tylor.memmos.util.AppPrefs.setThemeColor(ctx, if (a == ThemeAccent.PURPLE) "purple" else "green")
+    themeAccent.value = a
+}
+
+/* 品牌色令牌：官方源 vision-engine #10B981 荧光绿；现随主题切换（紫=Obsidian #7C3AED） */
+val AccentGreen: Color @Composable get() = themeAccent.value.primary
+val AccentGreenSoft: Color @Composable get() = themeAccent.value.soft // 浅调：链接/高亮文字
+
+/** 品牌强调：同一色相的轻微双调渐变（视觉立体但仍是单色系） */
+val AccentBrush: Brush @Composable get() = Brush.linearGradient(themeAccent.value.brush)
 
 val Ink = Color(0xFF000000) // 屏幕底色（官方源 Canvas #000000）
 
@@ -61,21 +109,14 @@ val BtnPrimaryBg = Color(0xFFF4F4F5)
 val BtnPrimaryText = Color(0xFF0A0A0C)
 val BtnGhostBorder = Color(0x33FFFFFF)
 
-/* 功能色 */
-val Success = Color(0xFF34D399) // 成功：绿系浅调（与品牌绿同族，语义区分靠明度）
-val ChipBg = Color(0x2E10B981) // 品牌绿 .18 容器
-val ChipStroke = Color(0x6610B981) // 品牌绿 .40 描边
-val ChipText = Color(0xFFA7F3D0) // 绿调浅文
+/* 功能色：随主题（成功/Chip 容器与描边/Chip 浅文） */
+val Success: Color @Composable get() = themeAccent.value.success
+val ChipBg: Color @Composable get() = themeAccent.value.chipBg
+val ChipStroke: Color @Composable get() = themeAccent.value.chipStroke
+val ChipText: Color @Composable get() = themeAccent.value.chipText
 
-// 占位封面：单色绿调深浅变体（官方源 Canvas 黑 + 绿 accent 家族）
-val CoverGradients = listOf(
-    listOf(Color(0xFF062A20), Color(0xFF0E5C43)),
-    listOf(Color(0xFF051F18), Color(0xFF0B4634)),
-    listOf(Color(0xFF073226), Color(0xFF126A4C)),
-    listOf(Color(0xFF04160F), Color(0xFF093526)),
-    listOf(Color(0xFF06271D), Color(0xFF0F5840)),
-    listOf(Color(0xFF051F18), Color(0xFF0D4A37)),
-)
+// 占位封面：单色深浅变体（随主题：绿系/Obsidian 紫系）
+val CoverGradients: List<List<Color>> @Composable get() = themeAccent.value.covers
 
 /* ───────── 样式规范 v4（参考 Linear/Raycast/Notion/Apple HIG） ───────── */
 
@@ -112,7 +153,7 @@ fun MemmosTheme(content: @Composable () -> Unit) {
     // 全程深色：本 App 只以悬浮层形态覆盖在宿主上，不跟随系统浅色（决策记录 §5）
     MaterialTheme(
         colorScheme = darkColorScheme(
-            primary = AccentGreen,
+            primary = themeAccent.value.primary,
             background = Ink,
             surface = Ink,
         ),

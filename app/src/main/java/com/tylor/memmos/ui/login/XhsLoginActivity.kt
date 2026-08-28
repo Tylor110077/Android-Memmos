@@ -1,5 +1,6 @@
 package com.tylor.memmos.ui.login
 
+import com.tylor.memmos.ui.theme.loadThemeAccent
 import android.annotation.SuppressLint
 import android.os.Bundle
 import android.os.Handler
@@ -58,6 +59,7 @@ class XhsLoginActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        loadThemeAccent(this)
         CookieManager.getInstance().setAcceptCookie(true)
         loggedIn = hasSession()
         setContent { LoginScreen() }
