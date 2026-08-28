@@ -105,3 +105,39 @@ object AppPrefs {
             .putString("profileAvatar", v).apply()
     }
 }
+
+/* ── 浮条设置持久化（用户要求：改完下次打开应用也生效）── */
+
+data class OverlayPrefs(
+    val width: Float,
+    val length: Float,
+    val opacity: Float,
+    val color: String,
+    val edge: String,
+    val frac: Float,
+)
+
+fun saveOverlay(ctx: Context, p: OverlayPrefs) {
+    ctx.getSharedPreferences("memmos_app", Context.MODE_PRIVATE).edit()
+        .putFloat("ovWidth", p.width)
+        .putFloat("ovLength", p.length)
+        .putFloat("ovOpacity", p.opacity)
+        .putString("ovColor", p.color)
+        .putString("ovEdge", p.edge)
+        .putFloat("ovFrac", p.frac)
+        .apply()
+}
+
+/** 从未保存过（无 ovWidth 键）返回 null，模型保持默认值 */
+fun loadOverlay(ctx: Context): OverlayPrefs? {
+    val sp = ctx.getSharedPreferences("memmos_app", Context.MODE_PRIVATE)
+    if (!sp.contains("ovWidth")) return null
+    return OverlayPrefs(
+        width = sp.getFloat("ovWidth", 5f),
+        length = sp.getFloat("ovLength", 100f),
+        opacity = sp.getFloat("ovOpacity", 0.92f),
+        color = sp.getString("ovColor", "WHITE") ?: "WHITE",
+        edge = sp.getString("ovEdge", "LEFT") ?: "LEFT",
+        frac = sp.getFloat("ovFrac", 0.39f),
+    )
+}

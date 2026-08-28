@@ -1,5 +1,6 @@
 package com.tylor.memmos.ui
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -44,11 +45,13 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import coil.compose.AsyncImage
 import com.tylor.memmos.data.ClipStore
 import com.tylor.memmos.sync.SyncPrefs
 import com.tylor.memmos.ui.components.VisionRowCard
 import com.tylor.memmos.ui.fetch.XhsCaptureService
+import com.tylor.memmos.R
 import com.tylor.memmos.ui.theme.ChipStroke
 import com.tylor.memmos.ui.theme.BtnPrimaryBg
 import com.tylor.memmos.ui.theme.BtnPrimaryText
@@ -114,6 +117,12 @@ fun CapturePanel(
             Column(Modifier.fillMaxSize()) {
                 // 头部（模板 Header）：玻璃圆形设置/关闭钮 + 标题 + 配对 chip
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    Image(
+                        painter = painterResource(R.drawable.ic_logo_m),
+                        contentDescription = null,
+                        modifier = Modifier.size(width = 19.dp, height = 17.dp),
+                    )
+                    Spacer(Modifier.width(7.dp))
                     Text(
                         "Memmos 捕捉",
                         color = Color(0xFFF5F7FA), fontSize = 15.sp, fontWeight = FontWeight.Medium,

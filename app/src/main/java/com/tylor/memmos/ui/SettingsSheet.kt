@@ -190,12 +190,12 @@ fun SettingsSheet(
                 label = "贴边位置",
                 value = frac, valueText = "${(frac * 100).toInt()}%",
             ) { onFracChange(it) }
-            // 宽/长独立（用户要求：浮条同时设定宽度和长度）；范围 5-36——可更细、上限不变
+            // 宽/长独立（用户要求：浮条同时设定宽度和长度）；宽度 4-36（用户要求最低 4）、长度 48-150
             SliderRow(
                 label = "宽度",
-                value = (barWidth - 5f) / 31f,
+                value = (barWidth - 4f) / 32f,
                 valueText = "${barWidth.toInt()}dp",
-            ) { onWidthChange(5f + it * 31f) }
+            ) { onWidthChange(4f + it * 32f) }
             SliderRow(
                 label = "长度",
                 value = (barLength - 48f) / 102f,

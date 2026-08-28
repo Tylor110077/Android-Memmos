@@ -11,6 +11,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -71,6 +72,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.TextStyle
@@ -112,6 +114,7 @@ import com.tylor.memmos.ui.components.VisionCard
 import com.tylor.memmos.ui.components.VisionRowCard
 import com.tylor.memmos.ui.theme.ChipStroke
 import com.tylor.memmos.ui.theme.AccentGreenSoft
+import com.tylor.memmos.R
 import com.tylor.memmos.ui.theme.AccentBrush
 import com.tylor.memmos.ui.theme.ThemeAccent
 import com.tylor.memmos.ui.theme.loadThemeAccent
@@ -424,10 +427,11 @@ private fun CapturePage(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Spacer(Modifier.height(40.dp))
-        Box(
-            Modifier.size(56.dp).background(AccentBrush, RoundedCornerShape(18.dp)),
-            contentAlignment = Alignment.Center,
-        ) { Text("M", color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.Bold) }
+        Image(
+            painter = painterResource(R.drawable.ic_logo_m),
+            contentDescription = "Memmos logo",
+            modifier = Modifier.size(width = 52.dp, height = 47.dp),
+        )
         Spacer(Modifier.height(12.dp))
         PageTitle("Memmos 捕捉")
         Text(

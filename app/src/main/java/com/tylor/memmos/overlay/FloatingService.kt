@@ -32,6 +32,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.foundation.systemGestureExclusion
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.unit.dp
+import com.tylor.memmos.util.OverlayPrefs
+import com.tylor.memmos.util.saveOverlay
+import com.tylor.memmos.util.loadOverlay
 import com.tylor.memmos.R
 import com.tylor.memmos.ui.EdgeTab
 import com.tylor.memmos.ui.TabEdge
@@ -40,6 +43,7 @@ import com.tylor.memmos.ui.fetch.ClipboardBridgeActivity
 import com.tylor.memmos.ui.fetch.XhsCaptureService
 import com.tylor.memmos.MainActivity
 import com.tylor.memmos.net.XhsFetcher
+import com.tylor.memmos.util.AppPrefs
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlin.math.abs
 import kotlin.math.roundToInt
@@ -91,6 +95,7 @@ class FloatingService : Service() {
         applyPending = false
         applyScaleToTabWindow()
         applyRestingPosition(animated = false)
+        persistOverlaySettings()
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -106,13 +111,30 @@ class FloatingService : Service() {
                 main.postDelayed(applyOnChange, 40L)
             }
         }
+        // 浮条设置跨启动生效（用户要求）：先恢复，再在每次变化时落盘
+        loadOverlay(this)?.let { model.loadFrom(it) }
     }
 
-    /** 触发区（用户 2026-08-28 要求）：仅 = 屏幕边缘到浮条之间的 5dp 缝隙 + 浮条本身。
+    /** applyOnChange 落盘（与几何更新同一 40ms 节流，apply() 异步不阻塞） */
+    private fun persistOverlaySettings() {
+        saveOverlay(
+            this,
+            OverlayPrefs(
+                width = model.barWidth.value,
+                length = model.barLength.value,
+                opacity = model.opacity.value,
+                color = model.barColor.value.name,
+                edge = model.edge.value.name,
+                frac = model.frac.value,
+            ),
+        )
+    }
+
+    /** 触发区（用户要求）：仅 = 屏幕边缘到浮条之间的 4dp 缝隙 + 浮条本身。
      *  不再做任何额外延展（此前 +40/+24dp、整体 ≥56dp 的扩大会覆盖条上下/左右的条外区域，
      *  吞掉宿主 App 在那里的触摸与返回手势）。返回 (宽, 高)，按边缘转置。 */
     private fun hotSize(edge: TabEdge, barWidth: Float, barLength: Float): Pair<Float, Float> {
-        val gap = 5f
+        val gap = 4f
         return when (edge) {
             TabEdge.LEFT, TabEdge.RIGHT -> (gap + barWidth) to barLength
             TabEdge.TOP, TabEdge.BOTTOM -> barLength to (gap + barWidth)
