@@ -3,8 +3,6 @@ package com.tylor.memmos
 import android.app.Activity
 import android.app.Application
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
 import com.tylor.memmos.overlay.FloatingService
 
 /**
@@ -13,23 +11,17 @@ import com.tylor.memmos.overlay.FloatingService
  * 延迟 100ms 复核避免旋转/重建 Activity 时的瞬时误判。
  */
 class MemmosApp : Application() {
-    private val main = Handler(Looper.getMainLooper())
     private var refs = 0
-    private val checkBackground = Runnable {
-        if (refs == 0) FloatingService.collapseOnHome()
-    }
 
     override fun onCreate() {
         super.onCreate()
         registerActivityLifecycleCallbacks(object : ActivityLifecycleCallbacks {
-            override fun onActivityStarted(activity: Activity) {
-                refs++
-                main.removeCallbacks(checkBackground)
-            }
+            override fun onActivityStarted(activity: Activity) { refs++ }
 
             override fun onActivityStopped(activity: Activity) {
+                // 延迟为 0（用户要求：转屏等任何退后台都立即收起面板，无需误判保护）
                 refs = (refs - 1).coerceAtLeast(0)
-                main.postDelayed(checkBackground, 100)
+                if (refs == 0) FloatingService.collapseOnHome()
             }
 
             override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {}
