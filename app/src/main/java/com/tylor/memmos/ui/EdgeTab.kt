@@ -22,11 +22,12 @@ import androidx.compose.ui.unit.dp
 /** 滑块停靠的四条边（吸附目标） */
 enum class TabEdge { LEFT, RIGHT, TOP, BOTTOM }
 
-/** 滑块本体配色（纯色，用户要求绿/白/深灰三选一） */
+/** 滑块本体配色（纯色，用户要求绿/白/深灰/紫四选一；紫=Obsidian 品牌紫） */
 enum class TabColor(val body: Color) {
     GREEN(Color(0xFF10B981)), // 品牌绿
     WHITE(Color(0xFFF5F7FA)), // 纯白
     DARK(Color(0xFF3A3F4B)),  // 深灰
+    PURPLE(Color(0xFF7C3AED)), // Obsidian 紫
 }
 
 /**

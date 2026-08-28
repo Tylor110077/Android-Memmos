@@ -179,6 +179,8 @@ fun SettingsSheet(
                 ColorChip("白", TabColor.WHITE, barColor == TabColor.WHITE) { onColorChange(TabColor.WHITE) }
                 Spacer(Modifier.width(4.dp))
                 ColorChip("深灰", TabColor.DARK, barColor == TabColor.DARK) { onColorChange(TabColor.DARK) }
+                Spacer(Modifier.width(4.dp))
+                ColorChip("紫", TabColor.PURPLE, barColor == TabColor.PURPLE) { onColorChange(TabColor.PURPLE) }
             }
             Spacer(Modifier.height(2.dp))
             SoftDivider() // 分区装饰线（两端渐隐）
