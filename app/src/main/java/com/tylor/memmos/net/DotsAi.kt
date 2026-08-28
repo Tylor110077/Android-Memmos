@@ -117,7 +117,10 @@ object DotsAi {
                 .build()
             client.newCall(req).execute().use { resp ->
                 if (!resp.isSuccessful) {
-                    android.util.Log.d("MemmosDbg", "dots ai http ${resp.code}")
+                    // 失败原因必须可诊断（用户反馈：只见「生成失败」不明原因）。
+                    // 401=key 错误/失效；403=超频/命中共用限制；429=限流；5xx=服务端；其余网络异常走 catch
+                    val errBody = runCatching { resp.body?.string()?.take(200) }.getOrNull() ?: ""
+                    android.util.Log.d("MemmosDbg", "dots ai fail http=${resp.code} body=$errBody")
                     return@withContext null
                 }
                 val root = JSONObject(resp.body?.string() ?: return@withContext null)
