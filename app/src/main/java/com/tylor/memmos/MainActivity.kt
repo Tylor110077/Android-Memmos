@@ -1072,12 +1072,42 @@ private fun SettingsPage(message: String?, onMessage: (String?) -> Unit) {
                 AiSegChip("常规总结", aiLevel == "full") { aiLevel = "full"; AppPrefs.setAiSummaryLevel(ctx, "full") }
                 Spacer(Modifier.width(4.dp))
                 AiSegChip("极简总结", aiLevel == "brief") { aiLevel = "brief"; AppPrefs.setAiSummaryLevel(ctx, "brief") }
+                Spacer(Modifier.width(4.dp))
+                AiSegChip("自定义", aiLevel == "custom") { aiLevel = "custom"; AppPrefs.setAiSummaryLevel(ctx, "custom") }
             }
-            Text(
-                "极简：用几句话简要总结，不要废话",
-                fontSize = 10.sp, color = TextFaint, lineHeight = 15.sp,
-                modifier = Modifier.padding(top = 6.dp),
-            )
+            if (aiLevel == "custom") {
+                Spacer(Modifier.height(8.dp))
+                var customPrompt by remember {
+                    mutableStateOf(AppPrefs.aiCustomPrompt(ctx))
+                }
+                TextField(
+                    value = customPrompt,
+                    onValueChange = { customPrompt = it; AppPrefs.setAiCustomPrompt(ctx, it) },
+                    placeholder = { Text("输入你的总结提示词（留空则用常规总结）", fontSize = 12.sp, color = TextFaint) },
+                    minLines = 3,
+                    textStyle = LocalTextStyle.current.copy(fontSize = 12.sp, color = TextHi, lineHeight = 17.sp),
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = Color(0x14FFFFFF),
+                        unfocusedContainerColor = Color(0x0FFFFFFF),
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent,
+                        cursorColor = Color(0xFF6EE7B7),
+                    ),
+                    shape = RoundedCornerShape(12.dp),
+                )
+                Text(
+                    "自定义提示词会替代内置总结要求；素材（正文/图片/视频/评论）仍会一并提供",
+                    fontSize = 10.sp, color = TextFaint, lineHeight = 15.sp,
+                    modifier = Modifier.padding(top = 6.dp),
+                )
+            } else {
+                Text(
+                    "极简：用几句话简要总结，不要废话",
+                    fontSize = 10.sp, color = TextFaint, lineHeight = 15.sp,
+                    modifier = Modifier.padding(top = 6.dp),
+                )
+            }
             Spacer(Modifier.height(12.dp))
             TextField(
                 value = aiKey,

@@ -56,8 +56,9 @@ object AiSummaryRunner {
                 return@launch
             }
             running.value = Task(noteId, note.title)
-            val brief = AppPrefs.aiSummaryLevel(app) == "brief"
-            val sum = DotsAi.summarize(key, note, brief)
+            val level = AppPrefs.aiSummaryLevel(app)
+            val custom = if (level == "custom") AppPrefs.aiCustomPrompt(app).takeIf { it.isNotBlank() } else null
+            val sum = DotsAi.summarize(key, note, brief = level == "brief", customPrompt = custom)
             if (sum != null) {
                 runCatching {
                     val l = store.load()

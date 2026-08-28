@@ -40,8 +40,14 @@ object DotsAi {
 4. 评论区有代表性的观点（如果提供了；无评论则说明）
 输出格式：第一行 `## AI 总结`，然后按小段落与要点列表组织；只输出总结本身，不要额外解释。"""
 
-    /** 生成笔记 AI 总结；失败返回 null（不抛给 UI，UI 有手动重试） */
-    suspend fun summarize(apiKey: String, note: ClipNote, brief: Boolean = false): String? = withContext(Dispatchers.IO) {
+    /** 生成笔记 AI 总结；失败返回 null（不抛给 UI，UI 有手动重试）。
+     *  提示词优先级：customPrompt（档位=自定义，空白回退常规）> brief > 常规 */
+    suspend fun summarize(
+        apiKey: String,
+        note: ClipNote,
+        brief: Boolean = false,
+        customPrompt: String? = null,
+    ): String? = withContext(Dispatchers.IO) {
         if (apiKey.isBlank()) return@withContext null
         val blocks = JSONArray()
         fun text(t: String) {
@@ -88,7 +94,16 @@ object DotsAi {
                     .put(
                         JSONObject()
                             .put("role", "system")
-                            .put("content", JSONArray().put(JSONObject().put("type", "text").put("text", if (brief) BRIEF_PROMPT else SYSTEM_PROMPT))),
+                            .put(
+                                "content",
+                                JSONArray().put(
+                                    JSONObject().put("type", "text").put(
+                                        "text",
+                                        customPrompt?.takeIf { it.isNotBlank() }
+                                            ?: (if (brief) BRIEF_PROMPT else SYSTEM_PROMPT),
+                                    ),
+                                ),
+                            ),
                     )
                     .put(JSONObject().put("role", "user").put("content", blocks)),
             )

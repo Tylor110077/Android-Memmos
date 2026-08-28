@@ -42,13 +42,22 @@ object AppPrefs {
             .putInt("aiSummaryMode", v.coerceIn(0, 2)).apply()
     }
 
-    /** AI 总结档位：full=原始总结 brief=极简（一句话提示词） */
+    /** AI 总结档位：full=原始总结 brief=极简 custom=自定义提示词（空则回退 full） */
     fun aiSummaryLevel(ctx: Context): String =
         ctx.getSharedPreferences(FILE, Context.MODE_PRIVATE).getString("aiSummaryLevel", "full").orEmpty()
 
     fun setAiSummaryLevel(ctx: Context, v: String) {
         ctx.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit()
-            .putString("aiSummaryLevel", if (v == "brief") "brief" else "full").apply()
+            .putString("aiSummaryLevel", if (v == "brief" || v == "custom") v else "full").apply()
+    }
+
+    /** 自定义总结提示词（档位=custom 时生效；只存本机） */
+    fun aiCustomPrompt(ctx: Context): String =
+        ctx.getSharedPreferences(FILE, Context.MODE_PRIVATE).getString("aiCustomPrompt", "").orEmpty()
+
+    fun setAiCustomPrompt(ctx: Context, v: String) {
+        ctx.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit()
+            .putString("aiCustomPrompt", v).apply()
     }
 
     /** Dots API Key（仅存本机；切勿写入日志/仓库） */
