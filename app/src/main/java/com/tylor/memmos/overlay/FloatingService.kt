@@ -66,10 +66,11 @@ class FloatingService : Service() {
 
         private var instance: FloatingService? = null
 
-        /** App 退后台/按 Home（MemmosApp 生命周期 + CLOSE_SYSTEM_DIALOGS 广播）时收起面板，浮条保留 */
+        /** App 退后台/按 Home（MemmosApp 生命周期 + CLOSE_SYSTEM_DIALOGS 广播）时收起面板，浮条保留。
+         *  立即移除不做动画（用户要求收起要快；Home 手势本身已有系统动画，无需面板再演一遍） */
         fun collapseOnHome() {
             val svc = instance ?: return
-            svc.main.post { if (svc.panelView != null) svc.removePanel(animated = true) }
+            svc.main.post { if (svc.panelView != null) svc.removePanel(animated = false) }
         }
     }
 
