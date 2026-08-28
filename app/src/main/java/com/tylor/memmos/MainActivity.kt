@@ -430,7 +430,7 @@ private fun CapturePage(
         Image(
             painter = painterResource(R.drawable.ic_logo_m),
             contentDescription = "Memmos logo",
-            modifier = Modifier.size(width = 52.dp, height = 47.dp),
+            modifier = Modifier.size(width = 40.dp, height = 36.dp),
         )
         Spacer(Modifier.height(12.dp))
         PageTitle("Memmos 捕捉")

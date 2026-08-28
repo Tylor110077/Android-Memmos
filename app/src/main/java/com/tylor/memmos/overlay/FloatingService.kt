@@ -355,7 +355,14 @@ class FloatingService : Service() {
                                 model.dragging.value = false
                                 if (panelView == null) showPanel(fromEdge = true)
                                 v.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
-                                dragStartX = panelLp.x.toFloat() // 手势起点=隐藏位，松手按拉出比例判定
+                                // 震动即露出（用户要求）：触发瞬间面板先探出 15% 屏宽——
+                                // 不必完全打开，后续继续跟手；此前面板停在屏幕外隐藏位，
+                                // 震动了却毫无视觉反馈。dragStartX 记探出位，松手仍按「触发必开」判定
+                                val (sw, _) = screen()
+                                val peek = (sw * 0.15f).roundToInt()
+                                panelLp.x = if (model.edge.value == TabEdge.RIGHT) sw - peek else -sw + peek
+                                throttledPanelApply()
+                                dragStartX = panelLp.x.toFloat()
                                 lastX = ev.rawX; lastT = System.currentTimeMillis()
                             }
                             else -> moved = true // 拖拽换边（含向外滑/纵向）
