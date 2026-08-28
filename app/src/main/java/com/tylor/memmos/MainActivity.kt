@@ -116,6 +116,7 @@ import com.tylor.memmos.ui.theme.ChipStroke
 import com.tylor.memmos.ui.theme.AccentGreenSoft
 import com.tylor.memmos.R
 import com.tylor.memmos.ui.theme.AccentBrush
+import com.tylor.memmos.ui.theme.AccentOrange
 import com.tylor.memmos.ui.theme.ThemeAccent
 import com.tylor.memmos.ui.theme.loadThemeAccent
 import com.tylor.memmos.ui.theme.setThemeAccent
@@ -1179,6 +1180,43 @@ private fun SettingsPage(message: String?, onMessage: (String?) -> Unit) {
         Spacer(Modifier.height(22.dp))
 
         SectionLabel("悬浮窗")
+        Spacer(Modifier.height(10.dp))
+        // 回桌面自动收起（用户要求）：面板开在其他 App 上时，靠使用情况访问权限检测已回桌面
+        val usageGranted = remember { FloatingService.usageAccessGranted(ctx) }
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(12.dp))
+                .background(GlassFill)
+                .border(1.dp, GlassStrokeSoft, RoundedCornerShape(12.dp))
+                .padding(horizontal = 13.dp, vertical = 11.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(Modifier.size(8.dp).background(if (usageGranted) Success else AccentOrange, CircleShape))
+            Spacer(Modifier.width(8.dp))
+            Column(Modifier.weight(1f)) {
+                Text("回桌面自动收起面板", fontSize = 13.sp, color = TextHi, fontWeight = FontWeight.SemiBold)
+                Text(
+                    if (usageGranted) "已开启：面板开在其他应用上时，回到桌面即自动收起"
+                    else "面板开在其他应用上时回到桌面收起，需要使用情况访问权限",
+                    fontSize = 11.sp, color = TextFaint, lineHeight = 16.sp,
+                )
+            }
+            if (!usageGranted) {
+                Text(
+                    "去开启",
+                    fontSize = 12.sp, color = Color(0xFF6EE7B7), fontWeight = FontWeight.Bold,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(999.dp))
+                        .clickable {
+                            runCatching {
+                                ctx.startActivity(Intent(android.provider.Settings.ACTION_USAGE_ACCESS_SETTINGS))
+                            }
+                        }
+                        .padding(horizontal = 10.dp, vertical = 6.dp),
+                )
+            }
+        }
         Spacer(Modifier.height(10.dp))
         // 按钮式整卡（用户要求）：整卡可点=动作；两行状态分别显示「权限/运行」
         Row(

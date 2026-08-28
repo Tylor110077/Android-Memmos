@@ -47,6 +47,7 @@ import com.tylor.memmos.MainActivity
 import com.tylor.memmos.net.XhsFetcher
 import com.tylor.memmos.util.AppPrefs
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
@@ -65,6 +66,16 @@ class FloatingService : Service() {
         private const val NOTIF_ID = 1001
 
         private var instance: FloatingService? = null
+
+        /** 设置页展示授权状态用 */
+        fun usageAccessGranted(ctx: Context): Boolean {
+            val op = (ctx.getSystemService(Context.APP_OPS_SERVICE) as android.app.AppOpsManager)
+                .unsafeCheckOpNoThrow(
+                    android.app.AppOpsManager.OPSTR_GET_USAGE_STATS,
+                    android.os.Process.myUid(), ctx.packageName,
+                )
+            return op == android.app.AppOpsManager.MODE_ALLOWED
+        }
 
         /** App 退后台/按 Home（MemmosApp 生命周期 + CLOSE_SYSTEM_DIALOGS 广播）时收起面板，浮条保留。
          *  延迟为 0 即刻触发，收起保留滑出动画（用户要求） */
@@ -524,10 +535,44 @@ class FloatingService : Service() {
             }
         }
         wm.addView(panelView, panelLp)
+        startHomeWatch()
         showBackInterceptor()
         // 非跟手打开（点滑块）：从隐藏位滑入；跟手打开时坐标由手势驱动
         if (!fromEdge) animatePanelTo(0f, 320L)
         // 跟手模式：面板停在隐藏位，等手势 dx 拉出来（中间状态）
+    }
+
+    /** 面板开在其他 App 上时，生命周期/广播两条路都收不到「回到桌面」信号
+     *  （我们早已退后台；多数 ROM 手势导航不发 CLOSE_SYSTEM_DIALOGS）。
+     *  用 UsageStats（使用情况访问权限）每 400ms 看一眼前台包，是桌面 → 收起。 */
+    private var homeWatchJob: kotlinx.coroutines.Job? = null
+
+    private fun hasUsageAccess(): Boolean = usageAccessGranted(this)
+
+    private fun startHomeWatch() {
+        if (!hasUsageAccess()) return
+        val launchers = packageManager.queryIntentActivities(
+            Intent(android.content.Intent.ACTION_MAIN).addCategory(android.content.Intent.CATEGORY_HOME), 0,
+        ).mapNotNull { it.activityInfo?.packageName }.toSet()
+        homeWatchJob?.cancel()
+        homeWatchJob = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Default).launch {
+            val usm = getSystemService(Context.USAGE_STATS_SERVICE) as android.app.usage.UsageStatsManager
+            while (panelView != null) {
+                val now = System.currentTimeMillis()
+                val ev = android.app.usage.UsageEvents.Event()
+                var last: String? = null
+                val it = usm.queryEvents(now - 5_000, now)
+                while (it.hasNextEvent()) {
+                    it.getNextEvent(ev)
+                    if (ev.eventType == android.app.usage.UsageEvents.Event.ACTIVITY_RESUMED) last = ev.packageName
+                }
+                if (last != null && last in launchers) {
+                    collapseOnHome()
+                    break
+                }
+                kotlinx.coroutines.delay(400)
+            }
+        }
     }
 
     /** 全屏透明可聚焦窗口：只收返回键（NOT_TOUCHABLE → 触摸全穿透） */
@@ -668,6 +713,7 @@ class FloatingService : Service() {
         }
         panelOwner?.destroy()
         panelView = null; panelOwner = null
+        homeWatchJob?.cancel(); homeWatchJob = null
         panelBusy = false
         removeBackInterceptor() // 焦点归还宿主
     }
