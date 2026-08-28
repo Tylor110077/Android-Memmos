@@ -115,6 +115,10 @@ object XhsFetcher {
 
     /** 从任意分享文本里提取笔记链接（短链或 discovery/explore 长链）
      *  短链实测两种形态：http://xhslink.com/aXXX 与 https://xhslink.cn/o/xxx（2026 手机 App 分享格式） */
+    /** 从链接取笔记 id（discovery/item 或 explore 段）；短链需先 resolveShort 展开 */
+    fun noteIdFromUrl(url: String): String? =
+        Regex("""(?:discovery/item|explore)/([a-zA-Z0-9]+)""").find(url)?.groupValues?.get(1)
+
     fun extractUrl(text: String): String? {
         Regex("""https?://xhslink\.(?:com|cn)/[^\s,，]+""").find(text)?.let { return it.value }
         Regex("""https://www\.xiaohongshu\.com/(?:discovery/item|explore)/[a-zA-Z0-9]+(?:\?[^\s,，]*)?""")

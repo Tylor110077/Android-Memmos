@@ -130,6 +130,24 @@ class XhsCaptureService : Service() {
             return
         }
         noteUrl = url
+        update(0.12f, "检查是否已剪藏…")
+        scope.launch {
+            // 重复抓取检测（用户要求）：短链先展开取笔记 id，命中剪藏库 → 提示并停止，不再加载页面
+            val resolved = runCatching { XhsFetcher.resolveShort(url) }.getOrNull() ?: url
+            val id = XhsFetcher.noteIdFromUrl(resolved)
+            val dup = id != null && withContext(Dispatchers.IO) {
+                ClipStore(this@XhsCaptureService).load().any { it.id == id || it.pageUrl.contains(id) }
+            }
+            if (dup) {
+                handler.post { fail("重复剪藏：这篇已在剪藏库中，未重复抓取") }
+                return@launch
+            }
+            noteUrl = resolved
+            handler.post { loadNotePage(resolved) }
+        }
+    }
+
+    private fun loadNotePage(url: String) {
         update(0.12f, "加载笔记页…")
         val wv = WebView(this)
         wv.settings.apply {
