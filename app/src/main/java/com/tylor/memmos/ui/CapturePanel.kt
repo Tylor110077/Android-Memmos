@@ -243,10 +243,11 @@ fun CapturePanel(
 /** 配对状态：读真实 SyncPrefs（演示版为写死文案，已替换） */
 private data class PanelSourceTag(val label: String, val fg: Color)
 
+@Composable
 private fun sourceTag(origin: String): PanelSourceTag = when (origin) {
     "bilibili" -> PanelSourceTag("哔哩哔哩", Color(0xFF9EC5FF))
     "douyin" -> PanelSourceTag("抖音", Color(0xFF7FD8D0))
-    else -> PanelSourceTag("小红书", Color(0xFFA7F3D0))
+    else -> PanelSourceTag("小红书", ChipText)
 }
 
 @Composable
