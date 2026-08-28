@@ -29,6 +29,7 @@ import android.animation.ValueAnimator
 import androidx.compose.foundation.layout.size
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.systemGestureExclusion
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.unit.dp
 import com.tylor.memmos.R
@@ -107,18 +108,23 @@ class FloatingService : Service() {
         }
     }
 
-    /** 触控热区（用户要求判定范围比显示更大、更容易触发）：可视条 5-36dp，
-     *  宽度侧另留 ≥40dp、长度侧 ≥24dp，且整体 ≥56dp，余量全部留在屏幕内侧 */
-    private fun hotW(v: Float) = maxOf(56f, v + 40f)
-    private fun hotH(v: Float) = maxOf(56f, v + 24f)
+    /** 触发区（用户 2026-08-28 要求）：仅 = 屏幕边缘到浮条之间的 5dp 缝隙 + 浮条本身。
+     *  不再做任何额外延展（此前 +40/+24dp、整体 ≥56dp 的扩大会覆盖条上下/左右的条外区域，
+     *  吞掉宿主 App 在那里的触摸与返回手势）。返回 (宽, 高)，按边缘转置。 */
+    private fun hotSize(edge: TabEdge, barWidth: Float, barLength: Float): Pair<Float, Float> {
+        val gap = 5f
+        return when (edge) {
+            TabEdge.LEFT, TabEdge.RIGHT -> (gap + barWidth) to barLength
+            TabEdge.TOP, TabEdge.BOTTOM -> barLength to (gap + barWidth)
+        }
+    }
 
-    /** 宽/长滑块生效：按当前 barWidth/barLength 重算滑块窗口热区（视觉+触控同步） */
+    /** 宽/长滑块生效：按当前 edge+barWidth/barLength 重算触发区窗口（视觉+触控同步） */
     private fun applyScaleToTabWindow() {
         if (tabView == null || !::tabLp.isInitialized) return
-        val w = model.barWidth.value
-        val l = model.barLength.value
-        val newW = dp(hotW(w)).roundToInt()
-        val newH = dp(hotH(l)).roundToInt()
+        val (hw, hh) = hotSize(model.edge.value, model.barWidth.value, model.barLength.value)
+        val newW = dp(hw).roundToInt()
+        val newH = dp(hh).roundToInt()
         if (tabLp.width == newW && tabLp.height == newH) return // 尺寸没变跳过，减少无谓重排
         tabLp.width = newW
         tabLp.height = newH
@@ -149,9 +155,8 @@ class FloatingService : Service() {
 
     private fun showTab() {
         if (tabView != null) return
-        // 视觉宽/长独立设定（默认 20×88dp）；触控余量（≥40/24dp、整体 ≥56dp）全部留在屏幕内侧
-        val hotWdp = hotW(model.barWidth.value)
-        val hotHdp = hotH(model.barLength.value)
+        // 触发区窗口：边缘 5dp 缝隙 + 浮条本体（无额外延展）；缝隙留在贴边一侧
+        val (hotWdp, hotHdp) = hotSize(model.edge.value, model.barWidth.value, model.barLength.value)
         tabLp = WindowManager.LayoutParams().apply {
             type = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
             format = PixelFormat.TRANSLUCENT
@@ -188,21 +193,28 @@ class FloatingService : Service() {
         val d by model.dragging
         val e by model.edge
         val c by model.barColor
-        // 视觉贴向屏幕边一侧，触控余量留在内侧
+        // 窗口=触发区（5dp 缝隙+浮条）。视觉浮条贴屏幕边一侧摆放：缝隙留在贴边侧，
+        // 内侧无边距——条外区域的触摸全部穿透回宿主 App（用户要求不得拦截返回手势）
+        val (ww, wh) = hotSize(e, bw, bl)
+        val horizontal = e == TabEdge.TOP || e == TabEdge.BOTTOM
         val align = when (e) {
-            TabEdge.LEFT -> Alignment.CenterStart
-            TabEdge.RIGHT -> Alignment.CenterEnd
-            TabEdge.TOP -> Alignment.TopCenter
-            TabEdge.BOTTOM -> Alignment.BottomCenter
+            TabEdge.LEFT -> Alignment.CenterEnd    // 条贴右缘摆 → 左侧留 5dp 缝隙
+            TabEdge.RIGHT -> Alignment.CenterStart // 条贴左缘摆 → 右侧留 5dp 缝隙
+            TabEdge.TOP -> Alignment.BottomCenter  // 横条贴下缘摆 → 顶部留 5dp 缝隙
+            TabEdge.BOTTOM -> Alignment.TopCenter  // 横条贴上缘摆 → 底部留 5dp 缝隙
         }
         Box(
             Modifier
                 .fillMaxSize()
-                .size(hotW(bw).dp, hotH(bl).dp),
+                .size(ww.dp, wh.dp)
+                // 整个触发区（含缝隙）排除系统返回手势：从边缘到条的内滑手势归面板打开；
+                // 窗口外（条上下/左右条外区域）不受影响，系统手势照常
+                .systemGestureExclusion(),
             contentAlignment = align,
         ) {
             EdgeTab(
                 barWidth = bw, barLength = bl, alpha = a, color = c, dragging = d,
+                horizontal = horizontal,
                 active = panelView != null, // 面板开着时浮条全透明可见，静止态更低调
             )
         }

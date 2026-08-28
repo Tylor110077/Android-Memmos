@@ -32,7 +32,7 @@ enum class TabColor(val body: Color) {
 /**
  * 贴边滑块（柱状胶囊版）：
  * 柱状本体、头尾两角全圆（半径=宽度一半，标准胶囊）；纯色统一填充（无渐变）；
- * 触控热区由外层容器保证 ≥48dp（余量全部留在屏幕内侧，见 FloatingService）。
+ * horizontal=true 时为横条（贴上/下边）：长宽互换渲染，其余不变。
  * alpha=不透明度滑块（0.4→1.0，图层整体透明度）。
  */
 @OptIn(ExperimentalFoundationApi::class)
@@ -43,12 +43,14 @@ fun EdgeTab(
     alpha: Float,
     color: TabColor,
     dragging: Boolean,
+    /** 贴上/下边时为横条：尺寸长宽互换 */
+    horizontal: Boolean = false,
     /** 面板打开/被拖拽时全透明可见；静止态乘 0.55 更低调（用户要求触发器存在更不明显） */
     active: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
-    val w = barWidth
-    val h = barLength
+    val w = if (horizontal) barLength else barWidth
+    val h = if (horizontal) barWidth else barLength
     // 柱状胶囊：头尾全圆（用户要求「头尾为类似圆形」）
     val shape = RoundedCornerShape(999.dp)
     // 透明度/阴影在「拖拽中 ↔ 静止」切换时渐变过渡：瞬时跳变在滑动过程中表现为
