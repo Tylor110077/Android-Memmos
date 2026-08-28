@@ -1181,12 +1181,12 @@ private fun SettingsPage(message: String?, onMessage: (String?) -> Unit) {
             Modifier
                 .fillMaxWidth()
                 .background(
-                    if (canDraw && running) Color(0x0D46C882) else Color(0x0DFFFFFF),
+                    if (canDraw && running) ChipBg else Color(0x0DFFFFFF),
                     RoundedCornerShape(16.dp),
                 )
                 .border(
                     1.dp,
-                    if (canDraw && running) Color(0x3346C882) else Color(0x26FFFFFF),
+                    if (canDraw && running) ChipStroke else Color(0x26FFFFFF),
                     RoundedCornerShape(16.dp),
                 )
                 .clickable {

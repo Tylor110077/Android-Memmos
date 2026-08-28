@@ -49,6 +49,7 @@ import com.tylor.memmos.data.ClipStore
 import com.tylor.memmos.sync.SyncPrefs
 import com.tylor.memmos.ui.components.VisionRowCard
 import com.tylor.memmos.ui.fetch.XhsCaptureService
+import com.tylor.memmos.ui.theme.ChipStroke
 import com.tylor.memmos.ui.theme.BtnPrimaryBg
 import com.tylor.memmos.ui.theme.BtnPrimaryText
 import com.tylor.memmos.ui.theme.ChipBg
@@ -253,12 +254,12 @@ private fun PairedChip(paired: Boolean) {
     Row(
         Modifier
             .background(
-                if (paired) Color(0x1F46C882) else Color(0x14FFFFFF),
+                if (paired) ChipBg else Color(0x14FFFFFF),
                 RoundedCornerShape(999.dp),
             )
             .border(
                 1.dp,
-                if (paired) Color(0x4D46C882) else Color(0x26FFFFFF),
+                if (paired) ChipStroke else Color(0x26FFFFFF),
                 RoundedCornerShape(999.dp),
             )
             .padding(horizontal = 9.dp, vertical = 4.dp),
