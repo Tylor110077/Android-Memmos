@@ -5,7 +5,9 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
 import android.content.ClipboardManager
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.IntentFilter
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.graphics.PixelFormat
@@ -61,6 +63,14 @@ class FloatingService : Service() {
         val running = MutableStateFlow(false)
         private const val CHANNEL_ID = "memmos_overlay"
         private const val NOTIF_ID = 1001
+
+        private var instance: FloatingService? = null
+
+        /** App 退后台/按 Home（MemmosApp 生命周期 + CLOSE_SYSTEM_DIALOGS 广播）时收起面板，浮条保留 */
+        fun collapseOnHome() {
+            val svc = instance ?: return
+            svc.main.post { if (svc.panelView != null) svc.removePanel(animated = true) }
+        }
     }
 
     private lateinit var wm: WindowManager
@@ -100,8 +110,17 @@ class FloatingService : Service() {
 
     override fun onBind(intent: Intent?): IBinder? = null
 
+    private val closeSystemDialogs = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            // Home 键/最近任务/手势回主屏等系统收起动作 → 面板收起（浮条保留）
+            android.util.Log.d("MemmosDbg", "close sys dialogs reason=" + intent.getStringExtra("reason"))
+            collapseOnHome()
+        }
+    }
+
     override fun onCreate() {
         super.onCreate()
+        instance = this
         wm = getSystemService(Context.WINDOW_SERVICE) as WindowManager
         // 位置/大小变化都走这里：重算热区尺寸（scale 影响视觉与触控）+ 停靠位置。
         // 拖动是连续变化：40ms 合并一次（执行时读最新值），仍跟手且大幅降低窗口重排频率
@@ -165,6 +184,8 @@ class FloatingService : Service() {
     }
 
     override fun onDestroy() {
+        instance = null
+        runCatching { unregisterReceiver(closeSystemDialogs) }
         removePanel(animated = false)
         removeTab()
         removeBackInterceptor()

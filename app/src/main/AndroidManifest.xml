@@ -20,6 +20,7 @@
         android:maxSdkVersion="28" />
 
     <application
+        android:name=".MemmosApp"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:allowBackup="true"
