@@ -26,8 +26,9 @@ import java.util.Locale
  */
 object SyncEngine {
 
-    /** 同步结果：uploaded=上传篇数 · deleted=清理的远端已删帖子 · skipped=上传失败篇数 */
-    data class Result(val uploaded: Int, val deleted: Int, val skipped: Int)
+    /** 同步结果：uploaded=上传篇数 · deleted=清理的远端已删帖子 · skipped=上传失败篇数 ·
+     *  failedDeleteFiles=远端文件删除失败数（>0 通常意味着 Obsidian 端插件版本过旧） */
+    data class Result(val uploaded: Int, val deleted: Int, val skipped: Int, val failedDeleteFiles: Int = 0)
 
     /** 帖子 md 里的 memmos-id（远端联删/归属识别用） */
     private val POST_ID_RE = Regex("""^memmos-id:\s*(\S+)""", RegexOption.MULTILINE)
@@ -367,6 +368,7 @@ object SyncEngine {
         //   手机已删除的帖子 → 连带删除 Obsidian 上的 note.md 与媒体附件（media/{id12}-*）；
         //   「Obsidian 有而手机没有」目前不处理（浏览器插件阶段再说）。 ──
         var deletedRemote = 0
+        var failedDeleteFiles = 0 // 删除失败的远端文件数（旧插件无 /api/delete 时会整批失败，必须可见）
         val myPostIds = local.filter { it.origin != "vault" }.map { it.id }.toSet()
         val root = rootDir(client)
         var remotePosts = 0
@@ -379,16 +381,13 @@ object SyncEngine {
             val prefix = "${postId.take(12)}"
             val srcDir = path.substringBefore("/origin content/") // {根}/{源}
             val folder = path.substringAfter("/origin content/").substringBeforeLast("/note.md")
-            runCatching { client.deleteFile(path) }
-                .onFailure { android.util.Log.d("MemmosDbg", "remote delete md fail $path: ${it.message}") }
+            if (!client.deleteFile(path)) failedDeleteFiles++
             remote.keys.filter { it.startsWith("$srcDir/media/$prefix") }.forEach { a ->
-                runCatching { client.deleteFile(a) }
-                    .onFailure { android.util.Log.d("MemmosDbg", "remote delete media fail $a: ${it.message}") }
+                if (!client.deleteFile(a)) failedDeleteFiles++
             }
             // AI 总结同级文件夹也级联删除（note.md 引用了它，帖子没了总结也没意义）
             remote.keys.filter { it.startsWith("$srcDir/AI summary/$folder/") }.forEach { s ->
-                runCatching { client.deleteFile(s) }
-                    .onFailure { android.util.Log.d("MemmosDbg", "remote delete summary fail $s: ${it.message}") }
+                if (!client.deleteFile(s)) failedDeleteFiles++
             }
             android.util.Log.d("MemmosDbg", "remote delete post: $path (id=$postId) attachments removed")
             deletedRemote++
@@ -410,10 +409,16 @@ object SyncEngine {
         lastSyncMsg.value = when {
             up == 0 && deletedRemote == 0 ->
                 "两端一致：手机内容已全部同步到 Obsidian（无变化）"
-            else -> "同步完成：上传 $up 篇 · 清理已删帖子 $deletedRemote 个 · 失败 $skip"
+            else -> buildString {
+                append("同步完成：上传 $up 篇 · 清理已删帖子 $deletedRemote 个 · 失败 $skip")
+                // 远端文件删除失败（典型：Obsidian 端插件未重载到带 /api/delete 的版本）必须显式提示
+                if (failedDeleteFiles > 0) {
+                    append("；⚠ 有 $failedDeleteFiles 个远端文件删除失败——请在 Obsidian 重载 Memmos Graph 插件后重试")
+                }
+            }
         }
         progress.value = null
         store.save(local)
-        return@withContext Result(up, deletedRemote, skip)
+        return@withContext Result(up, deletedRemote, skip, failedDeleteFiles)
     }
 }

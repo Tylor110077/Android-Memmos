@@ -115,10 +115,12 @@ class SyncClient(
     suspend fun getBinary(path: String): String =
         JSONObject(call("/api/binary?path=$path")).optString("base64")
 
-    /** 删除远端文件（Obsidian 插件侧文件；手机为唯一真源时的联删） */
-    suspend fun deleteFile(path: String) {
+    /** 删除远端文件（Obsidian 插件侧文件；手机为唯一真源时的联删）。
+     *  返回是否成功——失败要让上层感知（旧插件无此端点/路径不存在等），不再静默吞掉 */
+    suspend fun deleteFile(path: String): Boolean = runCatching {
         call("/api/delete", "POST", JSONObject().put("path", path).toString())
-    }
+        true
+    }.getOrDefault(false)
 
     /** 包装请求体：按 64KB 块写出并回调已写比例（反映 base64 编码后的整体传输） */
     private class ProgressBody(
