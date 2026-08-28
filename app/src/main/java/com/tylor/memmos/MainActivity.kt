@@ -175,12 +175,23 @@ fun MainTabs(clipCapture: Boolean = false) {
     /**
      * 批量删除：全选删除曾因「每篇一次全量过滤 + 主线程全量写盘」卡死闪退（ANR）。
      * 现在一次过滤 + 后台一次持久化；磁盘写改为原子写（见 ClipStore.save）。
+     * 帖子相关的本地视频文件一并删除（图片是 URL 引用不落盘，无本地文件可清）。
      */
     fun removeMany(ids: Set<String>) {
         if (ids.isEmpty()) return
+        val removed = clips.filter { it.id in ids }
         val remaining = clips.filter { it.id !in ids }.toMutableList()
         clips = remaining // 先同步更新 UI，持久化放后台
-        scope.launch { withContext(Dispatchers.IO) { store.save(remaining) } }
+        scope.launch {
+            withContext(Dispatchers.IO) {
+                removed.forEach { n ->
+                    n.localVideoPath?.let { p ->
+                        runCatching { java.io.File(p).takeIf { it.exists() }?.delete() }
+                    }
+                }
+                store.save(remaining)
+            }
+        }
     }
 
     fun remove(note: ClipNote) = removeMany(setOf(note.id))
